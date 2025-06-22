@@ -1,0 +1,210 @@
+// OnlyGrass Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  firstName String
+  lastName  String
+  avatar    String?
+  
+  // Location & Privacy
+  latitude  Float?
+  longitude Float?
+  locationUpdatedAt DateTime?
+  shareLocation     Boolean @default(true)
+  
+  // Functional Human Index (FHI) Score
+  fhiScore        Int      @default(100)
+  totalGrassTouched Int    @default(0)
+  streak          Int      @default(0)
+  longestStreak   Int      @default(0)
+  
+  // Social
+  friends         User[]   @relation("UserFriends")
+  friendOf        User[]   @relation("UserFriends")
+  friendRequests  FriendRequest[]
+  
+  // Activity
+  swipes          GrassSwipe[]
+  challenges      GrassChallenge[]
+  achievements    UserAchievement[]
+  grassBotRoasts  GrassBotRoast[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("users")
+}
+
+model GrassPatch {
+  id          String @id @default(cuid())
+  
+  // Location Data
+  latitude    Float
+  longitude   Float
+  address     String?
+  city        String?
+  country     String?
+  
+  // Satellite Imagery
+  satelliteImageUrl String
+  zoomLevel        Int @default(18)
+  
+  // AI Generated Content
+  claudeDescription String
+  difficultyRating  Int @default(1) // 1-5 scale
+  grassQuality      String // "pristine", "decent", "questionable", "sus"
+  
+  // Metadata
+  discoveredBy String?
+  isActive     Boolean @default(true)
+  
+  // Relations
+  swipes      GrassSwipe[]
+  challenges  GrassChallenge[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("grass_patches")
+}
+
+model GrassSwipe {
+  id      String @id @default(cuid())
+  
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  
+  patchId String
+  patch   GrassPatch @relation(fields: [patchId], references: [id])
+  
+  action  SwipeAction // "like", "nope"
+  
+  createdAt DateTime @default(now())
+  
+  @@map("grass_swipes")
+}
+
+model GrassChallenge {
+  id String @id @default(cuid())
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  
+  patchId String
+  patch   GrassPatch @relation(fields: [patchId], references: [id])
+  
+  // Challenge Details
+  status         ChallengeStatus @default(ACTIVE)
+  expiresAt      DateTime
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  
+  // Verification
+  submissionImageUrl String?
+  geminiVerified     Boolean @default(false)
+  verificationNotes  String?
+  
+  // Scoring
+  fhiPointsAwarded Int @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("grass_challenges")
+}
+
+model FriendRequest {
+  id         String @id @default(cuid())
+  
+  fromUserId String
+  fromUser   User   @relation(fields: [fromUserId], references: [id])
+  
+  toUserId   String
+  
+  status     FriendRequestStatus @default(PENDING)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([fromUserId, toUserId])
+  @@map("friend_requests")
+}
+
+model UserAchievement {
+  id String @id @default(cuid())
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  
+  achievementType AchievementType
+  unlockedAt      DateTime @default(now())
+  
+  @@unique([userId, achievementType])
+  @@map("user_achievements")
+}
+
+model GrassBotRoast {
+  id String @id @default(cuid())
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  
+  roastText    String
+  roastType    RoastType
+  isDisplayed  Boolean @default(false)
+  
+  // Context
+  challengeId String?
+  triggerEvent String // "challenge_failed", "low_fhi", "streak_broken", etc.
+  
+  createdAt DateTime @default(now())
+  
+  @@map("grass_bot_roasts")
+}
+
+// Enums
+enum SwipeAction {
+  LIKE
+  NOPE
+}
+
+enum ChallengeStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum AchievementType {
+  FIRST_GRASS
+  STREAK_5
+  STREAK_10
+  STREAK_30
+  FHI_MASTER
+  SPEED_DEMON
+  GRASS_CONNOISSEUR
+  SOCIAL_BUTTERFLY
+}
+
+enum RoastType {
+  GENTLE_NUDGE
+  MODERATE_ROAST
+  SAVAGE_BURN
+  EXISTENTIAL_CRISIS
+}

@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  body {
+    @apply bg-gradient-to-br from-grass-50 via-white to-earth-50 font-sans;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/20 backdrop-blur-xl border border-white/30 shadow-2xl;
+  }
+  
+  .premium-shadow {
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      0 20px 25px -5px rgba(0, 0, 0, 0.1),
+      0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .gradient-grass {
+    background: linear-gradient(135deg, 
+      #22c55e 0%, 
+      #16a34a  50%, 
+      #15803d 100%);
+  }
+  
+  .gradient-earth {
+    background: linear-gradient(135deg, 
+      #dba855 0%, 
+      #c28b3d 50%, 
+      #a16d2d 100%);
+  }
+  
+  .card-stack {
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
+  
+  .swipe-card {
+    @apply will-change-transform;
+    transform-origin: center;
+    backface-visibility: hidden;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
