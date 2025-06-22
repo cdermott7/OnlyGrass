@@ -36,12 +36,19 @@ OnlyGrass combines satellite imagery analysis with AI-powered descriptions to cr
 - **Real-time Database**: Live data synchronization with PostgreSQL and Prisma ORM
 - **Premium Mobile UI**: Glass morphism effects with LiquidGlass shader effects and smooth animations
 - **Session Reviews**: Post-session feedback system with quality assessments and feature tagging
+- **Social Network**: Full social system with friends, leaderboards, and user search
+- **Friend Requests**: Send, accept, and manage friend connections with other users
+- **Competitive Leaderboards**: Global and friends-only leaderboards with FHI score rankings
+- **Weekly Statistics**: Track grass touched, FHI gained, and challenges completed
+- **Achievement System**: Unlock badges and rewards for grass-touching milestones
 
 ## Demo Video
 
 [![OnlyGrass Demo Video](https://img.youtube.com/vi/uxVcm2e2tYo/maxresdefault.jpg)](https://www.youtube.com/watch?v=uxVcm2e2tYo&feature=youtu.be)
 
 Click the thumbnail above to watch our comprehensive demo showcasing OnlyGrass's AI-powered grass discovery, voice-enabled roasting system, challenge mechanics, and premium mobile interface with real-time FHI scoring.
+
+**The live demo at [https://only-grass.vercel.app/](https://only-grass.vercel.app/) is fully functional and deployed with all features working in real-time, including voice AI, social features, and live leaderboards.**
 
 ## Screenshots
 
@@ -60,6 +67,10 @@ Comprehensive user profile displaying FHI scores, achievements, weekly statistic
 ### Explore Screen
 Discovery interface with trending patches, nearby locations, search functionality, and detailed information about grass quality and accessibility ratings.
 ![Explore Screen](public/screenshots/explore.png)
+
+### Social Features & Leaderboards
+Comprehensive social network with friends management, competitive leaderboards, user search, and friend request system with real-time FHI score rankings.
+![Social Tab](public/screenshots/socialtab.png)
 
 ### GrassBot Integration
 AI-powered chat assistant providing personalized recommendations, motivation, and guidance throughout the grass discovery experience.
@@ -116,6 +127,7 @@ OnlyGrass/
 │   │   ├── LiquidGlass.tsx     # WebGL shader effects and visual enhancements
 │   │   ├── Navigation.tsx      # Bottom navigation bar
 │   │   ├── SessionCompleteScreen.tsx # Post-session feedback and reviews
+│   │   ├── SocialScreen.tsx    # Friends, leaderboards, and social features
 │   │   └── auth/               # Authentication components
 │   │       └── AuthScreen.tsx  # User login and registration
 │   ├── services/               # External service integrations
@@ -124,6 +136,7 @@ OnlyGrass/
 │   │   ├── gemini.ts           # Google Gemini Vision API
 │   │   ├── googleMaps.ts       # Google Maps integration
 │   │   ├── database.ts         # Database operations and queries
+│   │   ├── social.ts           # Friends, leaderboards, and social features
 │   │   └── auth.ts             # Authentication service layer
 │   ├── store/                  # State management
 │   │   └── useAppStore.ts      # Zustand store with comprehensive app state
@@ -375,6 +388,8 @@ The application features a sophisticated mobile-first design with premium animat
 - **Comprehensive Session Management**: End-to-end booking, challenge, and review system with photo verification
 
 Built for scalability with modern deployment practices and enterprise-grade architecture, OnlyGrass demonstrates the potential for AI-enhanced outdoor lifestyle applications.
+
+**Live Demo Status**: The application is fully deployed and operational at [https://only-grass.vercel.app/](https://only-grass.vercel.app/) with all features including real-time social interactions, voice AI, computer vision verification, and live database synchronization working seamlessly.
 
 ## License
 
