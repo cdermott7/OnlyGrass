@@ -204,10 +204,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Load user from authentication
   loadCurrentUser: async () => {
     try {
+      console.log('🔄 Loading current user...')
       const authUser = await authService.getCurrentUser()
       if (authUser) {
+        console.log('🔄 Got auth user, loading profile...')
         const profile = await authService.getUserProfile(authUser.id)
+        console.log('🔄 Got profile, avatar_url:', profile.avatar_url)
         const user = await convertProfileToUser(profile)
+        console.log('🔄 Converted to user, avatar:', user.avatar)
         set({ currentUser: user })
         return user
       }
@@ -504,28 +508,47 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   // Actions
   swipePatch: (action: SwipeAction) => {
-    const { swipedPatches, likedPatches } = get()
-    const newSwipedPatches = new Set(swipedPatches).add(action.grassId)
-    const newLikedPatches = new Set(likedPatches)
-    
-    if (action.action === 'like') {
-      newLikedPatches.add(action.grassId)
-      // Challenge will be created when user confirms in startChallenge modal
+    try {
+      const { swipedPatches, likedPatches } = get()
+      const newSwipedPatches = new Set(swipedPatches).add(action.grassId)
+      const newLikedPatches = new Set(likedPatches)
+      
+      if (action.action === 'like') {
+        newLikedPatches.add(action.grassId)
+        console.log('👍 Added patch to liked:', action.grassId)
+        // Challenge will be created when user confirms in startChallenge modal
+      } else {
+        console.log('👎 Swiped left on patch:', action.grassId)
+      }
+      
+      set({
+        swipedPatches: newSwipedPatches,
+        likedPatches: newLikedPatches
+      })
+    } catch (error) {
+      console.error('❌ Error in swipePatch:', error)
+      // Don't throw - just log the error to prevent app crashes
     }
-    
-    set({
-      swipedPatches: newSwipedPatches,
-      likedPatches: newLikedPatches
-    })
   },
   
   nextPatch: () => {
-    const { currentPatchIndex, grassPatches } = get()
-    if (currentPatchIndex < grassPatches.length - 1) {
-      set({ currentPatchIndex: currentPatchIndex + 1 })
-    } else {
-      // Load more patches if we're running out
-      get().refreshNearbyGrass()
+    try {
+      const { currentPatchIndex, grassPatches } = get()
+      console.log('🔄 Moving to next patch. Current index:', currentPatchIndex, 'Total patches:', grassPatches.length)
+      
+      if (currentPatchIndex < grassPatches.length - 1) {
+        set({ currentPatchIndex: currentPatchIndex + 1 })
+        console.log('✅ Moved to patch index:', currentPatchIndex + 1)
+      } else {
+        console.log('🔄 Running out of patches, refreshing...')
+        // Load more patches if we're running out - don't await to prevent blocking
+        get().refreshNearbyGrass().catch(error => {
+          console.error('❌ Error refreshing grass patches:', error)
+        })
+      }
+    } catch (error) {
+      console.error('❌ Error in nextPatch:', error)
+      // Don't throw - just log the error to prevent app crashes
     }
   },
   

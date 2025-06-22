@@ -33,7 +33,7 @@ const ProfileScreen: React.FC = () => {
           maxHeight: '100vh',
           height: '100%',
           paddingTop: 'var(--space-xl)',
-          paddingBottom: '8rem' // Fixed for 5-tab navigation
+          paddingBottom: '12rem' // Increased significantly to account for navigation bar
         }}
       >
         <div className="stack-xl">
@@ -69,6 +69,11 @@ const ProfileScreen: React.FC = () => {
                   src={currentUser.avatar}
                   alt={currentUser.firstName}
                   className="w-full h-full object-cover"
+                  key={currentUser.avatar} // Force re-render when avatar changes
+                  onError={(e) => {
+                    console.error('❌ Avatar failed to load:', currentUser.avatar)
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&q=80&fit=crop&crop=face'
+                  }}
                 />
               </div>
               <motion.button 

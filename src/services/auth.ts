@@ -254,6 +254,96 @@ export class AuthService {
     return profile
   }
 
+  // Upload profile picture to Supabase storage
+  async uploadProfilePicture(userId: string, file: File): Promise<string> {
+    try {
+      console.log('📤 Uploading profile picture for user:', userId)
+      
+      // Create unique filename
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${userId}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+      
+      console.log('📁 Upload path:', filePath)
+      
+      // Try to upload file to Supabase storage
+      let uploadData, uploadError
+      
+      // First try 'user-uploads' bucket
+      const uploadResult = await supabase.storage
+        .from('user-uploads')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        })
+      
+      uploadData = uploadResult.data
+      uploadError = uploadResult.error
+      
+      // If bucket doesn't exist, try 'avatars' bucket
+      if (uploadError && uploadError.message?.includes('not found')) {
+        console.log('🔄 user-uploads bucket not found, trying avatars bucket...')
+        const avatarResult = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true
+          })
+        uploadData = avatarResult.data
+        uploadError = avatarResult.error
+      }
+      
+      if (uploadError) {
+        console.error('❌ Storage upload error:', uploadError)
+        // If storage fails, fall back to converting image to base64
+        console.log('🔄 Storage failed, converting to base64...')
+        return await this.convertImageToBase64(file)
+      }
+      
+      console.log('✅ File uploaded successfully:', uploadData.path)
+      
+      // Get public URL - try both buckets
+      let publicUrl
+      try {
+        const urlData = supabase.storage
+          .from('user-uploads')
+          .getPublicUrl(filePath)
+        publicUrl = urlData.data.publicUrl
+      } catch (e) {
+        const urlData = supabase.storage
+          .from('avatars') 
+          .getPublicUrl(filePath)
+        publicUrl = urlData.data.publicUrl
+      }
+      
+      console.log('🔗 Public URL:', publicUrl)
+      return publicUrl
+      
+    } catch (error) {
+      console.error('❌ Failed to upload profile picture:', error)
+      // Fallback to base64 conversion
+      console.log('🔄 Upload completely failed, using base64 fallback...')
+      return await this.convertImageToBase64(file)
+    }
+  }
+
+  // Fallback: Convert image to base64 data URL
+  private async convertImageToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        console.log('📝 Converted image to base64, length:', result.length)
+        resolve(result)
+      }
+      reader.onerror = (e) => {
+        console.error('❌ Failed to convert image to base64:', e)
+        reject(new Error('Failed to process image'))
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
   // Update user profile
   async updateProfile(userId: string, updates: ProfileUpdateData) {
     const updateData: any = {}
@@ -302,6 +392,7 @@ export class AuthService {
     }
 
     console.log('✅ Profile updated successfully:', data)
+    console.log('✅ New avatar_url in database:', data.avatar_url)
     return data
   }
 

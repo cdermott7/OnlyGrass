@@ -230,7 +230,7 @@ const ChallengeScreen: React.FC = () => {
           maxHeight: '100vh',
           height: '100%',
           paddingTop: 'var(--space-xl)',
-          paddingBottom: '8rem' // Increased for 5-tab navigation
+          paddingBottom: '12rem' // Increased significantly to account for navigation bar
         }}
       >
         <div className="stack-lg">

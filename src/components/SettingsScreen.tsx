@@ -34,6 +34,7 @@ const SettingsScreen: React.FC = () => {
     autoGPS: true
   })
   const [isUpdating, setIsUpdating] = useState(false)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   
   // Handle profile picture change
   const handleProfilePictureChange = () => {
@@ -44,25 +45,68 @@ const SettingsScreen: React.FC = () => {
     const file = event.target.files?.[0]
     if (!file || !currentUser) return
     
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (JPG, PNG, etc.)')
+      return
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Please select an image smaller than 5MB')
+      return
+    }
+    
+    // Show preview
+    const previewUrl = URL.createObjectURL(file)
+    setPreviewImage(previewUrl)
+    
     setIsUpdating(true)
     try {
-      // Generate a unique avatar URL based on file name and timestamp
-      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${file.name}-${Date.now()}`
+      console.log('🖼️ Uploading profile picture for user:', currentUser.id)
+      console.log('📁 File details:', { name: file.name, size: file.size, type: file.type })
       
-      console.log('🖼️ Updating profile picture for user:', currentUser.id)
+      // Upload the actual image file to Supabase storage
+      const imageUrl = await authService.uploadProfilePicture(currentUser.id, file)
+      console.log('✅ Image uploaded, URL:', imageUrl)
       
-      // Update user profile with new avatar
+      // Update user profile with the actual image URL
       await authService.updateProfile(currentUser.id, {
-        avatarUrl: avatarUrl
+        avatarUrl: imageUrl
       })
       
-      // Reload user data
-      await loadCurrentUser()
-      console.log('✅ Profile picture updated successfully')
+      // Reload user data and wait for it to complete
+      const updatedUser = await loadCurrentUser()
+      console.log('✅ Profile picture updated successfully', updatedUser?.avatar)
+      
+      // Force re-render by updating state
+      if (updatedUser) {
+        setCurrentUser(updatedUser)
+      }
+      
       alert('Profile picture updated successfully!')
+      
+      // Clear preview
+      setPreviewImage(null)
     } catch (error) {
       console.error('❌ Failed to update profile picture:', error)
-      alert(`Failed to update profile picture: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      
+      // Provide specific error messages
+      let errorMessage = 'Failed to update profile picture'
+      if (error instanceof Error) {
+        if (error.message.includes('storage')) {
+          errorMessage = 'Failed to upload image. Please try again.'
+        } else if (error.message.includes('profile')) {
+          errorMessage = 'Failed to save profile. Please try again.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      alert(errorMessage)
+      
+      // Clear preview on error
+      setPreviewImage(null)
     } finally {
       setIsUpdating(false)
     }
@@ -319,12 +363,22 @@ const SettingsScreen: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <div className="flex items-center space-x-4 text-white">
-            <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white/30">
+            <div className="relative w-16 h-16 rounded-full overflow-hidden border-4 border-white/30">
               <img
-                src={currentUser.avatar}
+                src={previewImage || currentUser.avatar}
                 alt={currentUser.firstName}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover ${isUpdating ? 'opacity-70' : ''}`}
+                key={previewImage || currentUser.avatar} // Force re-render when avatar changes
+                onError={(e) => {
+                  console.error('❌ Settings avatar failed to load:', previewImage || currentUser.avatar)
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&q=80&fit=crop&crop=face'
+                }}
               />
+              {isUpdating && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                </div>
+              )}
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold">{currentUser.firstName} {currentUser.lastName}</h2>

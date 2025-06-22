@@ -21,7 +21,7 @@ const ExploreScreen: React.FC = () => {
           overflowY: 'scroll',
           maxHeight: '100vh',
           paddingTop: 'var(--space-xl)',
-          paddingBottom: '8rem' // Fixed for 5-tab navigation
+          paddingBottom: '12rem' // Increased significantly to account for navigation bar
         }}
       >
         <div className="stack-xl">

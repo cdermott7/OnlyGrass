@@ -101,6 +101,11 @@ const SwipeScreen: React.FC = () => {
   const currentPatch = grassPatches[currentPatchIndex]
   const nextPatchData = grassPatches[currentPatchIndex + 1]
   
+  // Debug logging
+  console.log('🌱 Current patch index:', currentPatchIndex, 'Total patches:', grassPatches.length)
+  console.log('🌱 Current patch:', currentPatch?.name)
+  console.log('🌱 Next patch:', nextPatchData?.name)
+  
   const bind = useGesture({
     onDrag: ({ offset: [dx, dy], velocity, direction: [xDir], cancel, down }) => {
       if (isSwipeAnimating || showMatch) return
@@ -145,8 +150,12 @@ const SwipeScreen: React.FC = () => {
   })
   
   const handleSwipe = (action: 'like' | 'dislike') => {
-    if (!currentPatch || isSwipeAnimating) return
+    if (!currentPatch || isSwipeAnimating) {
+      console.log('🚫 Swipe blocked:', { currentPatch: !!currentPatch, isSwipeAnimating })
+      return
+    }
     
+    console.log('🔄 Processing swipe:', action, 'for patch:', currentPatch.name)
     setIsSwipeAnimating(true)
     
     // Animate card off screen with spring physics
@@ -155,44 +164,63 @@ const SwipeScreen: React.FC = () => {
     
     // Use animate API with spring config
     const animateCard = async () => {
-      // Animate the card away
-      await Promise.all([
-        new Promise(resolve => {
-          x.set(targetX)
-          setTimeout(resolve, 300)
-        }),
-        new Promise(resolve => {
-          y.set(targetY)  
-          setTimeout(resolve, 300)
-        })
-      ])
-      
-      // Process the swipe
-      swipePatch({
-        grassId: currentPatch.id,
-        action: action,
-        timestamp: Date.now()
-      })
-      
-      // Reset position for next card
-      x.set(0)
-      y.set(0)
-      
-      // Move to next patch
-      nextPatch()
-      
-      // Clear animation state
-      setIsSwipeAnimating(false)
-      
-      // Handle match logic for likes
-      if (action === 'like') {
-        setMatchedPatch(currentPatch)
-        setShowMatch(true)
-        setTimeout(() => setShowMatch(false), 2000)
+      try {
+        // Animate the card away
+        await Promise.all([
+          new Promise(resolve => {
+            x.set(targetX)
+            setTimeout(resolve, 300)
+          }),
+          new Promise(resolve => {
+            y.set(targetY)  
+            setTimeout(resolve, 300)
+          })
+        ])
+        
+        // Process the swipe - wrap in try/catch to prevent app breaking
+        try {
+          swipePatch({
+            grassId: currentPatch.id,
+            action: action,
+            timestamp: Date.now()
+          })
+          console.log('✅ Swipe processed successfully:', action)
+        } catch (swipeError) {
+          console.error('❌ Error processing swipe:', swipeError)
+        }
+        
+        // Reset position for next card
+        x.set(0)
+        y.set(0)
+        
+        // Move to next patch - wrap in try/catch
+        try {
+          nextPatch()
+          console.log('✅ Moved to next patch')
+        } catch (nextError) {
+          console.error('❌ Error moving to next patch:', nextError)
+        }
+        
+        // Handle match logic for likes
+        if (action === 'like') {
+          setMatchedPatch(currentPatch)
+          setShowMatch(true)
+          setTimeout(() => setShowMatch(false), 2000)
+        }
+        
+      } catch (animationError) {
+        console.error('❌ Animation error:', animationError)
+      } finally {
+        // Always clear animation state to prevent app from getting stuck
+        setIsSwipeAnimating(false)
+        console.log('🔄 Animation state cleared')
       }
     }
     
-    animateCard()
+    animateCard().catch(error => {
+      console.error('❌ Swipe animation failed:', error)
+      setIsSwipeAnimating(false)
+    })
   }
   
   
@@ -422,6 +450,7 @@ const SwipeScreen: React.FC = () => {
               src={currentUser?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&q=80&fit=crop&crop=face'}
               alt="Profile"
               className="w-full h-full object-cover"
+              key={currentUser?.avatar} // Force re-render when avatar changes
             />
           </motion.button>
         </div>
@@ -470,7 +499,7 @@ const SwipeScreen: React.FC = () => {
       )}
       
       {/* Card Stack - Maximum vertical space */}
-      <div className="flex-1 relative px-3 pb-20">
+      <div className="flex-1 relative px-3" style={{ paddingBottom: '10rem' }}>
         <div className="relative w-full h-full card-stack" style={{ minHeight: '500px' }}>
         {/* Next card (background) */}
         {nextPatchData && (
@@ -679,6 +708,7 @@ const SwipeScreen: React.FC = () => {
                       src={currentUser?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&q=80&fit=crop&crop=face'}
                       alt="Profile"
                       className="w-full h-full object-cover"
+                      key={currentUser?.avatar} // Force re-render when avatar changes
                     />
                   </div>
                   <div>
