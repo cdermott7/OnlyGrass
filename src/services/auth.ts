@@ -266,14 +266,42 @@ export class AuthService {
     if (updates.longitude !== undefined) updateData.longitude = updates.longitude
     if (updates.shareLocation !== undefined) updateData.share_location = updates.shareLocation
 
+    console.log('🔄 Updating profile for user:', userId, 'with data:', updateData)
+
+    // First check if profile exists
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('❌ Error checking existing profile:', checkError)
+      throw checkError
+    }
+
+    if (!existingProfile) {
+      console.error('❌ Profile not found for user:', userId)
+      throw new Error('Profile not found. Please sign in again.')
+    }
+
     const { data, error } = await supabase
       .from('profiles')
       .update(updateData)
       .eq('id', userId)
       .select()
-      .single()
+      .maybeSingle()
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Profile update error:', error)
+      throw error
+    }
+
+    if (!data) {
+      throw new Error('No profile was updated. Please try again.')
+    }
+
+    console.log('✅ Profile updated successfully:', data)
     return data
   }
 

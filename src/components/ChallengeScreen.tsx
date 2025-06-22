@@ -15,6 +15,8 @@ const ChallengeScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [completedChallenges, setCompletedChallenges] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active')
+  const [showCompletionAnimation, setShowCompletionAnimation] = useState(false)
+  const [completionResult, setCompletionResult] = useState<{ success: boolean; points: number } | null>(null)
 
   // Load challenges data
   useEffect(() => {
@@ -97,15 +99,63 @@ const ChallengeScreen: React.FC = () => {
       setIsSubmitting(true)
       try {
         await completeChallenge(activeChallenge.id, uploadedFile)
-        // Reload challenges after completion
-        const allChallenges = await databaseService.getUserChallenges(currentUser!.id, 20)
-        const completed = allChallenges?.filter(c => c.status === 'COMPLETED' || c.status === 'FAILED') || []
-        setCompletedChallenges(completed)
+        
+        // Show completion animation
+        setCompletionResult({ success: true, points: 25 })
+        setShowCompletionAnimation(true)
+        
+        // Clear uploaded image
         setUploadedImage(null)
         setUploadedFile(null)
+        
+        // Clear active challenge after animation
+        setTimeout(() => {
+          useAppStore.setState({ activeChallenge: null })
+          setShowCompletionAnimation(false)
+          setCompletionResult(null)
+          
+          // Reload challenges
+          const reloadChallenges = async () => {
+            const allChallenges = await databaseService.getUserChallenges(currentUser!.id, 20)
+            const completed = allChallenges?.filter(c => c.status === 'COMPLETED' || c.status === 'FAILED') || []
+            setCompletedChallenges(completed)
+          }
+          reloadChallenges()
+        }, 3000)
+        
       } catch (error) {
         console.error('Failed to submit proof:', error)
-        alert('Photo validation failed. Please try taking another photo!')
+        
+        // Clear uploaded image on failure
+        setUploadedImage(null)
+        setUploadedFile(null)
+        
+        // Show failure animation
+        setCompletionResult({ success: false, points: -15 })
+        setShowCompletionAnimation(true)
+        
+        // Also try to fail the challenge in the database
+        try {
+          if (activeChallenge) {
+            await failChallenge(activeChallenge.id)
+          }
+        } catch (failError) {
+          console.error('Failed to update challenge status:', failError)
+        }
+        
+        // Hide animation after showing failure
+        setTimeout(() => {
+          setShowCompletionAnimation(false)
+          setCompletionResult(null)
+          
+          // Reload challenges to show updated status
+          const reloadChallenges = async () => {
+            const allChallenges = await databaseService.getUserChallenges(currentUser!.id, 20)
+            const completed = allChallenges?.filter(c => c.status === 'COMPLETED' || c.status === 'FAILED') || []
+            setCompletedChallenges(completed)
+          }
+          reloadChallenges()
+        }, 3000)
       } finally {
         setIsSubmitting(false)
       }
@@ -117,11 +167,54 @@ const ChallengeScreen: React.FC = () => {
       <div className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center">
         <motion.div
           className="text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <div className="text-6xl mb-4">⏳</div>
-          <div className="text-white text-xl font-semibold">Loading Challenges...</div>
+          <motion.div 
+            className="text-6xl mb-6"
+            animate={{ 
+              rotate: [0, 180, 360],
+              scale: [1, 1.2, 1]
+            }}
+            transition={{ 
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            🎯
+          </motion.div>
+          <motion.div 
+            className="text-white text-xl font-semibold mb-4"
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            Loading Challenges...
+          </motion.div>
+          <motion.div 
+            className="flex justify-center space-x-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 bg-white/60 rounded-full"
+                animate={{
+                  scale: [1, 1.5, 1],
+                  opacity: [0.6, 1, 0.6]
+                }}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  delay: i * 0.2
+                }}
+              />
+            ))}
+          </motion.div>
         </motion.div>
       </div>
     )
@@ -130,15 +223,17 @@ const ChallengeScreen: React.FC = () => {
   return (
     <div className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 relative overflow-hidden">
       <div 
-        className="h-full overflow-y-auto pt-6 pb-64 px-4" 
+        className="h-full overflow-y-auto container-fluid" 
         style={{ 
           WebkitOverflowScrolling: 'touch',
           overflowY: 'scroll',
           maxHeight: '100vh',
-          height: '100%'
+          height: '100%',
+          paddingTop: 'var(--space-xl)',
+          paddingBottom: '8rem' // Increased for 5-tab navigation
         }}
       >
-        <div className="max-w-md mx-auto space-y-6">
+        <div className="stack-lg">
           
           {/* Header with Tabs */}
           <motion.div
@@ -149,25 +244,43 @@ const ChallengeScreen: React.FC = () => {
             <h1 className="text-3xl font-bold text-white mb-4 text-center">Challenges</h1>
             
             {/* Tab Switcher */}
-            <div className="flex bg-white/10 backdrop-blur-sm rounded-2xl p-1">
+            <div 
+              className="glass-card-subtle flex"
+              style={{ 
+                padding: 'var(--space-xs)',
+                gap: 'var(--space-xs)'
+              }}
+            >
               <button
                 onClick={() => setActiveTab('active')}
-                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                className={`flex-1 font-semibold transition-all duration-300 flex items-center justify-center ${
                   activeTab === 'active' 
-                    ? 'bg-white text-gray-900 shadow-lg' 
-                    : 'text-white/70 hover:text-white'
+                    ? 'glass-card-strong bg-white/10 text-white shadow-lg border-white/20' 
+                    : 'text-white/70 hover:text-white/90 hover:bg-white/5'
                 }`}
+                style={{
+                  padding: 'var(--space-md)',
+                  borderRadius: 'var(--radius-lg)',
+                  gap: 'var(--space-sm)',
+                  backdropFilter: activeTab === 'active' ? 'blur(16px)' : 'none'
+                }}
               >
                 <Target className="w-4 h-4" />
                 <span>Active</span>
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                className={`flex-1 font-semibold transition-all duration-300 flex items-center justify-center ${
                   activeTab === 'history' 
-                    ? 'bg-white text-gray-900 shadow-lg' 
-                    : 'text-white/70 hover:text-white'
+                    ? 'glass-card-strong bg-white/10 text-white shadow-lg border-white/20' 
+                    : 'text-white/70 hover:text-white/90 hover:bg-white/5'
                 }`}
+                style={{
+                  padding: 'var(--space-md)',
+                  borderRadius: 'var(--radius-lg)',
+                  gap: 'var(--space-sm)',
+                  backdropFilter: activeTab === 'history' ? 'blur(16px)' : 'none'
+                }}
               >
                 <Calendar className="w-4 h-4" />
                 <span>History</span>
@@ -445,6 +558,93 @@ const ChallengeScreen: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
+      
+      {/* Completion Animation Overlay */}
+      <AnimatePresence>
+        {showCompletionAnimation && completionResult && (
+          <motion.div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100]"
+            style={{ 
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="text-center px-8"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 200 }}
+            >
+              <motion.div
+                className={`w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center ${
+                  completionResult.success 
+                    ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                    : 'bg-gradient-to-br from-red-500 to-red-600'
+                }`}
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  rotate: completionResult.success ? [0, 360] : [0, -10, 10, 0]
+                }}
+                transition={{ 
+                  duration: completionResult.success ? 2 : 0.5,
+                  repeat: completionResult.success ? 1 : 0
+                }}
+              >
+                {completionResult.success ? (
+                  <CheckCircle className="w-16 h-16 text-white" />
+                ) : (
+                  <XCircle className="w-16 h-16 text-white" />
+                )}
+              </motion.div>
+              
+              <motion.h2
+                className="text-3xl font-bold text-white mb-4"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                {completionResult.success ? 'Challenge Complete!' : 'Challenge Failed!'}
+              </motion.h2>
+              
+              <motion.p
+                className={`text-xl mb-6 ${
+                  completionResult.success ? 'text-green-300' : 'text-red-300'
+                }`}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                {completionResult.success 
+                  ? `You've earned ${completionResult.points} FHI points!`
+                  : `You lost ${Math.abs(completionResult.points)} FHI points.`
+                }
+              </motion.p>
+              
+              <motion.div
+                className="text-white/80 text-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+              >
+                {completionResult.success 
+                  ? 'Great job touching grass! Keep up the good work.' 
+                  : 'Photo validation failed. Try again next time!'
+                }
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

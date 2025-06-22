@@ -44,7 +44,7 @@ export class VapiService {
       const data = await response.json()
       return data.audioUrl || data.url
     } catch (error) {
-      console.error('Vapi TTS error:', error)
+      console.warn('⚠️ Vapi TTS API unavailable, using Web Speech fallback')
       // Fallback to Web Speech API
       return this.fallbackToWebSpeech(request.text)
     }
@@ -112,9 +112,8 @@ export class VapiService {
         await this.generateAndPlaySpeech(text, voice)
       }
     } catch (error) {
-      console.error('Failed to speak text:', error)
-      // Try fallback
-      await this.fallbackToWebSpeech(text)
+      console.warn('⚠️ TTS service unavailable, voice disabled for this session')
+      // Silently fail - voice is optional
     }
   }
 

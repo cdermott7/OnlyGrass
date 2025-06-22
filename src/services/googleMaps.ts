@@ -76,57 +76,67 @@ export class GoogleMapsService {
       await this.initialize()
     }
 
-    const service = new this.google!.maps.places.PlacesService(document.createElement('div'))
-    
-    const request: google.maps.places.PlaceSearchRequest = {
-      location: new this.google!.maps.LatLng(userLocation.lat, userLocation.lng),
-      radius: radiusKm * 1000, // Convert km to meters
-      type: 'park'
-    }
+    try {
+      // Use the new Place API instead of deprecated PlacesService
+      const request = {
+        fields: ['place_id', 'displayName', 'location', 'formattedAddress', 'vicinity'],
+        locationRestriction: {
+          center: { lat: userLocation.lat, lng: userLocation.lng },
+          radius: radiusKm * 1000 // Convert km to meters
+        },
+        includedTypes: ['park', 'tourist_attraction', 'establishment'],
+        maxResultCount: 20
+      }
 
-    return new Promise((resolve, reject) => {
-      service.nearbySearch(request, async (results, status) => {
-        if (status === this.google!.maps.places.PlacesServiceStatus.OK && results) {
-          const grassLocations: GrassLocation[] = []
+      // Use the new searchNearby method with Place API
+      const { Place } = await this.google!.maps.importLibrary("places") as google.maps.PlacesLibrary
+      const { places } = await Place.searchNearby(request)
 
-          for (const place of results.slice(0, 20)) { // Limit to 20 results
-            if (place.geometry?.location && place.place_id) {
-              const lat = place.geometry.location.lat()
-              const lng = place.geometry.location.lng()
-              
-              // Calculate distance from user
-              const distance = this.calculateDistance(
-                userLocation.lat, userLocation.lng,
-                lat, lng
-              )
+      const grassLocations: GrassLocation[] = []
 
-              // Only include places within the specified radius
-              if (distance <= radiusKm * 1000) {
-                const grassLocation: GrassLocation = {
-                  lat,
-                  lng,
-                  address: place.vicinity || place.formatted_address || 'Unknown location',
-                  city: this.extractCity(place.vicinity || place.formatted_address || ''),
-                  placeId: place.place_id,
-                  satelliteImageUrl: this.generateSatelliteImageUrl(lat, lng),
-                  distanceFromUser: Math.round(distance)
-                }
-                
-                grassLocations.push(grassLocation)
-              }
+      for (const place of places || []) {
+        if (place.location && place.id) {
+          const lat = place.location.lat()
+          const lng = place.location.lng()
+          
+          // Calculate distance from user
+          const distance = this.calculateDistance(
+            userLocation.lat, userLocation.lng,
+            lat, lng
+          )
+
+          // Only include places within the specified radius
+          if (distance <= radiusKm * 1000) {
+            const grassLocation: GrassLocation = {
+              lat,
+              lng,
+              address: place.formattedAddress || place.vicinity || 'Unknown location',
+              city: this.extractCity(place.formattedAddress || place.vicinity || ''),
+              placeId: place.id,
+              satelliteImageUrl: this.generateSatelliteImageUrl(lat, lng),
+              distanceFromUser: Math.round(distance)
             }
+            
+            grassLocations.push(grassLocation)
           }
-
-          // Sort by distance from user
-          grassLocations.sort((a, b) => a.distanceFromUser - b.distanceFromUser)
-          resolve(grassLocations)
-        } else {
-          console.error('Places search failed:', status)
-          // Return some fallback locations around San Francisco
-          resolve(this.getFallbackLocations(userLocation))
         }
-      })
-    })
+      }
+
+      // Sort by distance from user
+      grassLocations.sort((a, b) => a.distanceFromUser - b.distanceFromUser)
+      
+      if (grassLocations.length > 0) {
+        return grassLocations
+      } else {
+        // Return fallback locations if no places found
+        return this.getFallbackLocations(userLocation)
+      }
+
+    } catch (error) {
+      console.warn('⚠️ New Place API failed, falling back to local locations:', error)
+      // Return some fallback locations around the user's area
+      return this.getFallbackLocations(userLocation)
+    }
   }
 
   generateSatelliteImageUrl(lat: number, lng: number, zoom: number = 18): string {

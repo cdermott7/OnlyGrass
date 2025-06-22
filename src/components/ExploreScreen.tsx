@@ -15,14 +15,16 @@ const ExploreScreen: React.FC = () => {
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 via-white to-emerald-50 relative">
       <div 
-        className="h-full overflow-y-auto pt-6 pb-40 px-4" 
+        className="h-full overflow-y-auto container-fluid" 
         style={{ 
           WebkitOverflowScrolling: 'touch',
           overflowY: 'scroll',
-          maxHeight: '100vh'
+          maxHeight: '100vh',
+          paddingTop: 'var(--space-xl)',
+          paddingBottom: '8rem' // Fixed for 5-tab navigation
         }}
       >
-        <div className="max-w-md mx-auto space-y-6">
+        <div className="stack-xl">
         {/* Header */}
         <motion.div
           className="text-center mb-8"
@@ -49,9 +51,23 @@ const ExploreScreen: React.FC = () => {
             <input
               type="text"
               placeholder="Search for grass patches..."
-              className="w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-gray-200 focus:border-grass-500 focus:outline-none focus:ring-2 focus:ring-grass-500/20"
+              className="glass-card-subtle w-full focus-ring"
+              style={{
+                paddingLeft: 'calc(var(--space-md) + 2.5rem)',
+                paddingRight: 'var(--space-lg)',
+                paddingTop: 'var(--space-md)',
+                paddingBottom: 'var(--space-md)',
+                fontSize: 'var(--text-base)',
+                background: 'rgba(255,255,255,0.9)'
+              }}
             />
-            <button className="absolute right-2 top-2 p-2 bg-grass-500 text-white rounded-xl hover:bg-grass-600 transition-colors">
+            <button className="btn-glass absolute bg-grass-500 text-white hover:bg-grass-600" style={{
+              right: 'var(--space-sm)',
+              top: 'var(--space-sm)',
+              padding: 'var(--space-sm)',
+              minWidth: 'auto',
+              borderRadius: 'var(--radius-lg)'
+            }}>
               <Filter className="w-4 h-4" />
             </button>
           </div>
@@ -64,13 +80,19 @@ const ExploreScreen: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="bg-gradient-to-br from-grass-50 to-grass-100 rounded-2xl p-4 text-center">
-            <Compass className="w-8 h-8 text-grass-600 mx-auto mb-2" />
+          <div className="glass-card-subtle text-center" style={{
+            padding: 'var(--space-lg)',
+            background: 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.05) 100%)'
+          }}>
+            <Compass className="w-8 h-8 text-grass-600 mx-auto" style={{ marginBottom: 'var(--space-sm)' }} />
             <div className="text-2xl font-bold text-gray-800">{grassPatches.length}</div>
             <div className="text-sm text-gray-600">Patches Found</div>
           </div>
-          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-4 text-center">
-            <Star className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+          <div className="glass-card-subtle text-center" style={{
+            padding: 'var(--space-lg)',
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(245,158,11,0.05) 100%)'
+          }}>
+            <Star className="w-8 h-8 text-yellow-600 mx-auto" style={{ marginBottom: 'var(--space-sm)' }} />
             <div className="text-2xl font-bold text-gray-800">4.8</div>
             <div className="text-sm text-gray-600">Avg Rating</div>
           </div>
@@ -88,7 +110,11 @@ const ExploreScreen: React.FC = () => {
             {trendingPatches.map((patch, index) => (
               <motion.div
                 key={patch.id}
-                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 cursor-pointer"
+                className="glass-card-subtle cursor-pointer"
+                style={{
+                  padding: 'var(--space-lg)',
+                  background: 'rgba(255,255,255,0.9)'
+                }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/')}
@@ -137,7 +163,10 @@ const ExploreScreen: React.FC = () => {
             {nearbyPatches.map((patch) => (
               <motion.div
                 key={patch.id}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer"
+                className="glass-card-subtle overflow-hidden cursor-pointer"
+                style={{
+                  background: 'rgba(255,255,255,0.9)'
+                }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/')}
@@ -149,8 +178,8 @@ const ExploreScreen: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="p-3">
-                  <h3 className="font-semibold text-gray-800 text-sm mb-1 truncate">
+                <div style={{ padding: 'var(--space-md)' }}>
+                  <h3 className="font-semibold text-gray-800 text-sm truncate" style={{ marginBottom: 'var(--space-xs)' }}>
                     {patch.name}
                   </h3>
                   <div className="flex items-center space-x-1 mb-2">
@@ -170,7 +199,12 @@ const ExploreScreen: React.FC = () => {
         
         {/* Call to Action */}
         <motion.div
-          className="bg-gradient-to-br from-grass-500 to-grass-600 rounded-2xl p-6 text-center text-white mb-4"
+          className="glass-card gradient-success text-center text-white"
+          style={{
+            padding: 'var(--space-xl)',
+            marginBottom: 'var(--space-lg)',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+          }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -182,7 +216,12 @@ const ExploreScreen: React.FC = () => {
           </p>
           <button
             onClick={() => navigate('/')}
-            className="bg-white text-grass-600 px-6 py-3 rounded-xl font-semibold hover:bg-grass-50 transition-colors"
+            className="btn-glass bg-white text-grass-600 font-semibold hover:bg-grass-50 transition-colors"
+            style={{
+              padding: 'var(--space-md) var(--space-xl)',
+              background: 'white',
+              color: '#059669'
+            }}
           >
             Start Discovering
           </button>

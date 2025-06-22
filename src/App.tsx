@@ -9,6 +9,7 @@ import SettingsScreen from './components/SettingsScreen'
 import SessionCompleteScreen from './components/SessionCompleteScreen'
 import ExploreScreen from './components/ExploreScreen'
 import ChallengeScreen from './components/ChallengeScreen'
+import SocialScreen from './components/SocialScreen'
 import Navigation from './components/Navigation'
 import GrassBotChat from './components/GrassBotChat'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -53,17 +54,17 @@ function AppContent() {
           <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-l from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
         </div>
         
-        {/* iPhone-like Container */}
+        {/* iPhone-like Container with Enhanced Glassmorphism */}
         <div 
-          className="relative w-full max-w-sm mx-auto overflow-hidden"
+          className="relative w-full max-w-sm mx-auto overflow-hidden glass-card-strong"
           style={{ 
             aspectRatio: '9/19.5', 
             height: '844px',
-            borderRadius: '50px',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-            backdropFilter: 'blur(20px)',
-            border: '2px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.1)'
+            borderRadius: '3rem',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)',
+            backdropFilter: 'blur(32px)',
+            border: '2px solid rgba(255,255,255,0.15)',
+            boxShadow: '0 32px 64px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255,255,255,0.15)'
           }}
         >
           {/* Screen Content Area */}
@@ -133,6 +134,16 @@ function AppContent() {
                   transition={{ duration: 0.3 }}
                 >
                   <ExploreScreen />
+                </motion.div>
+              } />
+              <Route path="/social" element={
+                <motion.div
+                  initial={{ opacity: 0, x: 100 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -100 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <SocialScreen />
                 </motion.div>
               } />
               <Route path="/booking/:grassId" element={

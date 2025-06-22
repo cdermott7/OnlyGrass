@@ -12,7 +12,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    redirectTo: window.location.origin // Fix redirect to use current domain instead of localhost
   }
 })
 

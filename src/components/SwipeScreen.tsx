@@ -102,29 +102,45 @@ const SwipeScreen: React.FC = () => {
   const nextPatchData = grassPatches[currentPatchIndex + 1]
   
   const bind = useGesture({
-    onDrag: ({ offset: [dx, dy], velocity, direction: [xDir], cancel }) => {
-      if (isSwipeAnimating || showMatch) return // Also check if modal is open
+    onDrag: ({ offset: [dx, dy], velocity, direction: [xDir], cancel, down }) => {
+      if (isSwipeAnimating || showMatch) return
       
-      // Apply movement with physics
+      // Improved physics with better constraints
       x.set(dx)
-      y.set(dy * 0.4) // Limit vertical movement
+      y.set(dy * 0.2) // Reduce vertical movement further
       
-      const isFlick = velocity > 0.8
-      const threshold = isFlick ? 80 : 150
+      // Dynamic threshold based on velocity and distance - lowered for better responsiveness
+      const isFlick = Math.abs(velocity[0]) > 0.3
+      const threshold = isFlick ? 50 : 100
       
-      if (Math.abs(dx) > threshold) {
+      // More responsive swipe detection for both directions
+      if (Math.abs(dx) > threshold && down) {
         cancel()
+        console.log('🔄 Swipe detected:', xDir > 0 ? 'RIGHT (like)' : 'LEFT (dislike)', 'dx:', dx, 'velocity:', velocity[0])
         handleSwipe(xDir > 0 ? 'like' : 'dislike')
       }
     },
-    onDragEnd: ({ offset: [dx] }) => {
-      if (isSwipeAnimating || showMatch) return // Also check if modal is open
+    onDragEnd: ({ offset: [dx], velocity }) => {
+      if (isSwipeAnimating || showMatch) return
       
-      if (Math.abs(dx) < 150) {
-        // Animate back to center
+      // Enhanced swipe detection on drag end for missed swipes
+      const isSwipeVelocity = Math.abs(velocity[0]) > 0.2
+      const isSwipeDistance = Math.abs(dx) > 80
+      
+      if (isSwipeVelocity || isSwipeDistance) {
+        console.log('🔄 Drag end swipe detected:', dx > 0 ? 'RIGHT (like)' : 'LEFT (dislike)', 'dx:', dx, 'velocity:', velocity[0])
+        handleSwipe(dx > 0 ? 'like' : 'dislike')
+      } else {
+        // Smoother return animation with spring physics
         x.set(0)
         y.set(0)
       }
+    }
+  }, {
+    drag: {
+      filterTaps: true,
+      rubberband: true,
+      bounds: { left: -300, right: 300, top: -100, bottom: 100 }
     }
   })
   
@@ -133,51 +149,50 @@ const SwipeScreen: React.FC = () => {
     
     setIsSwipeAnimating(true)
     
-    // Smooth animated exit
-    const targetX = action === 'like' ? 600 : -600
-    const targetY = action === 'like' ? -150 : 150
+    // Animate card off screen with spring physics
+    const targetX = action === 'like' ? 500 : -500
+    const targetY = action === 'like' ? -100 : 100
     
-    // Use animate API for smooth spring transition
-    const controls = {
-      x: targetX,
-      y: targetY,
-      rotate: action === 'like' ? 30 : -30,
-      opacity: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-        duration: 0.4
+    // Use animate API with spring config
+    const animateCard = async () => {
+      // Animate the card away
+      await Promise.all([
+        new Promise(resolve => {
+          x.set(targetX)
+          setTimeout(resolve, 300)
+        }),
+        new Promise(resolve => {
+          y.set(targetY)  
+          setTimeout(resolve, 300)
+        })
+      ])
+      
+      // Process the swipe
+      swipePatch({
+        grassId: currentPatch.id,
+        action: action,
+        timestamp: Date.now()
+      })
+      
+      // Reset position for next card
+      x.set(0)
+      y.set(0)
+      
+      // Move to next patch
+      nextPatch()
+      
+      // Clear animation state
+      setIsSwipeAnimating(false)
+      
+      // Handle match logic for likes
+      if (action === 'like') {
+        setMatchedPatch(currentPatch)
+        setShowMatch(true)
+        setTimeout(() => setShowMatch(false), 2000)
       }
     }
     
-    // Apply the animation
-    x.set(targetX)
-    y.set(targetY)
-    
-    // Record swipe action
-    swipePatch({
-      grassId: currentPatch.id,
-      action,
-      timestamp: new Date().toISOString()
-    })
-    
-    // Move to next patch after animation
-    setTimeout(() => {
-      nextPatch()
-      x.set(0)
-      y.set(0)
-      setIsSwipeAnimating(false)
-      
-      // Create challenge and navigate when swiping right
-      if (action === 'like') {
-        setMatchedPatch(currentPatch)
-        // Small delay to ensure UI is ready
-        setTimeout(() => {
-          setShowMatch(true)
-        }, 100)
-      }
-    }, 400)
+    animateCard()
   }
   
   
@@ -266,12 +281,11 @@ const SwipeScreen: React.FC = () => {
       >
         {/* Glass morphism background */}
         <div 
-          className="absolute inset-0 rounded-2xl mx-2"
+          className="absolute inset-0 glass-card-strong"
           style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.3)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+            marginLeft: 'var(--space-sm)',
+            marginRight: 'var(--space-sm)',
+            borderRadius: 'var(--radius-xl)'
           }}
         />
         
@@ -279,7 +293,12 @@ const SwipeScreen: React.FC = () => {
           {/* Menu Button */}
           <motion.button
             onClick={() => setShowMenu(true)}
-            className="p-3 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 shadow-lg hover:bg-white/30 transition-all duration-300"
+            className="btn-glass hover:bg-white/30"
+            style={{
+              padding: 'var(--space-md)',
+              borderRadius: 'var(--radius-xl)',
+              minWidth: 'auto'
+            }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -417,11 +436,11 @@ const SwipeScreen: React.FC = () => {
           transition={{ type: "spring", stiffness: 200 }}
         >
           <motion.div 
-            className="rounded-2xl p-4 cursor-pointer"
+            className="glass-card cursor-pointer"
             style={{
+              padding: 'var(--space-lg)',
               background: 'linear-gradient(135deg, rgba(239,68,68,0.3) 0%, rgba(239,68,68,0.1) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(239,68,68,0.4)',
+              borderColor: 'rgba(239,68,68,0.4)',
               boxShadow: '0 8px 32px rgba(239,68,68,0.2)'
             }}
             whileHover={{ scale: 1.02 }}
@@ -548,14 +567,11 @@ const SwipeScreen: React.FC = () => {
             onClick={closeMatch}
           >
             <motion.div
-              className="max-w-sm mx-4 text-center"
+              className="glass-card-strong text-center container-fluid"
               style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 100%)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: '24px',
-                padding: '32px',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                maxWidth: '24rem',
+                padding: 'var(--space-2xl)',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 100%)'
               }}
               initial={{ scale: 0.8, opacity: 0, y: 50 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -638,8 +654,12 @@ const SwipeScreen: React.FC = () => {
             onClick={() => setShowMenu(false)}
           >
             <motion.div
-              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-96 overflow-y-auto"
-              style={{ WebkitOverflowScrolling: 'touch' }}
+              className="absolute bottom-0 left-0 right-0 bg-white shadow-2xl max-h-96 overflow-y-auto"
+              style={{ 
+                WebkitOverflowScrolling: 'touch',
+                borderTopLeftRadius: 'var(--radius-2xl)',
+                borderTopRightRadius: 'var(--radius-2xl)'
+              }}
               initial={{ y: 400 }}
               animate={{ y: 0 }}
               exit={{ y: 400 }}

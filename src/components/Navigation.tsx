@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Home, Target, User, Compass } from 'lucide-react'
+import { Home, Target, User, Users, Compass } from 'lucide-react'
 
 const Navigation: React.FC = () => {
   const location = useLocation()
@@ -11,12 +11,13 @@ const Navigation: React.FC = () => {
     { path: '/', icon: Home, label: 'Discover' },
     { path: '/challenges', icon: Target, label: 'Challenges' },
     { path: '/explore', icon: Compass, label: 'Explore' },
+    { path: '/social', icon: Users, label: 'Social' },
     { path: '/profile', icon: User, label: 'Profile' },
   ]
   
   return (
     <motion.div
-      className="absolute bottom-2 left-4 right-4 z-40 flex justify-center"
+      className="absolute bottom-4 left-4 right-4 z-40 flex justify-center"
       initial={{ y: 100, opacity: 0, scale: 0.8 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       transition={{ 
@@ -28,15 +29,19 @@ const Navigation: React.FC = () => {
       }}
     >
       <div 
-        className="rounded-3xl px-8 py-4 shadow-2xl"
+        className="glass-card-strong"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.5)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.8)'
+          borderRadius: 'var(--radius-2xl)',
+          padding: 'var(--space-sm) var(--space-md)',
+          background: 'rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          boxShadow: '0 16px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.2)',
+          width: '100%',
+          maxWidth: '400px'
         }}
       >
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-between w-full" style={{ gap: 'var(--space-xs)' }}>
           {tabs.map((tab, index) => {
             const isActive = location.pathname === tab.path
             const Icon = tab.icon
@@ -45,10 +50,18 @@ const Navigation: React.FC = () => {
               <motion.button
                 key={tab.path}
                 onClick={() => navigate(tab.path)}
-                className="relative flex flex-col items-center justify-center px-4 py-3 rounded-2xl transition-all duration-300 min-h-[60px]"
+                className="relative flex flex-col items-center justify-center transition-all duration-300"
+                style={{
+                  padding: 'var(--space-sm) var(--space-xs)',
+                  borderRadius: 'var(--radius-lg)',
+                  minHeight: '56px',
+                  flex: '1',
+                  maxWidth: '80px'
+                }}
                 whileHover={{ 
-                  scale: 1.1,
-                  y: -2
+                  scale: 1.05,
+                  y: -2,
+                  backgroundColor: 'rgba(255,255,255,0.1)'
                 }}
                 whileTap={{ 
                   scale: 0.95,
@@ -65,7 +78,12 @@ const Navigation: React.FC = () => {
               >
                 {isActive && (
                   <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl border border-blue-500/30"
+                    className="absolute inset-0 rounded-lg"
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      backdropFilter: 'blur(12px)'
+                    }}
                     layoutId="activeTab"
                     transition={{ 
                       type: "spring", 
@@ -77,32 +95,27 @@ const Navigation: React.FC = () => {
                 )}
                 
                 <motion.div
-                  className={`relative z-10 ${
+                  className={`relative z-10 flex flex-col items-center ${
                     isActive 
-                      ? 'text-blue-600 drop-shadow-sm' 
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'text-white drop-shadow-sm' 
+                      : 'text-white/70 hover:text-white/90'
                   }`}
                   animate={isActive ? { 
-                    scale: [1, 1.2, 1],
-                    rotateY: [0, 180, 360] 
+                    scale: [1, 1.1, 1]
                   } : {}}
                   transition={{ 
-                    duration: 0.6,
+                    duration: 0.4,
                     ease: "easeInOut"
                   }}
                 >
-                  <Icon className="w-5 h-5 mb-1" />
-                  <span className="text-xs font-semibold leading-none text-center">{tab.label}</span>
+                  <Icon className="w-4 h-4" style={{ marginBottom: 'var(--space-xs)' }} />
+                  <span 
+                    className="font-medium leading-none text-center"
+                    style={{ fontSize: '10px' }}
+                  >
+                    {tab.label}
+                  </span>
                 </motion.div>
-                
-                {isActive && (
-                  <motion.div
-                    className="absolute -bottom-1 left-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full"
-                    initial={{ scale: 0, x: "-50%" }}
-                    animate={{ scale: 1, x: "-50%" }}
-                    transition={{ delay: 0.2, type: "spring" }}
-                  />
-                )}
               </motion.button>
             )
           })}

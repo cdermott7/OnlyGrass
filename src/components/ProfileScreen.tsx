@@ -26,12 +26,17 @@ const ProfileScreen: React.FC = () => {
   return (
     <div className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 relative overflow-hidden">
       <div 
-        className="h-full overflow-y-auto pt-6 pb-40 px-4" 
+        className="h-full overflow-y-auto container-fluid" 
         style={{ 
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          overflowY: 'scroll',
+          maxHeight: '100vh',
+          height: '100%',
+          paddingTop: 'var(--space-xl)',
+          paddingBottom: '8rem' // Fixed for 5-tab navigation
         }}
       >
-        <div className="max-w-md mx-auto space-y-6">
+        <div className="stack-xl">
 
         {/* Hero Profile Header */}
         <motion.div
@@ -105,11 +110,11 @@ const ProfileScreen: React.FC = () => {
           transition={{ delay: 0.2 }}
         >
           <div 
-            className="p-6 rounded-2xl relative overflow-hidden"
+            className="glass-card-subtle relative overflow-hidden"
             style={{
+              padding: 'var(--space-xl)',
               background: 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.05) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(34,197,94,0.2)'
+              borderColor: 'rgba(34,197,94,0.2)'
             }}
           >
             <div className="relative z-10">
@@ -122,11 +127,11 @@ const ProfileScreen: React.FC = () => {
           </div>
           
           <div 
-            className="p-6 rounded-2xl relative overflow-hidden"
+            className="glass-card-subtle relative overflow-hidden"
             style={{
+              padding: 'var(--space-xl)',
               background: 'linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(59,130,246,0.05) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(59,130,246,0.2)'
+              borderColor: 'rgba(59,130,246,0.2)'
             }}
           >
             <div className="relative z-10">
@@ -141,9 +146,9 @@ const ProfileScreen: React.FC = () => {
 
         {/* FHI Score Card */}
         <motion.div
-          className="relative overflow-hidden rounded-2xl p-6"
+          className="glass-card relative overflow-hidden gradient-primary"
           style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            padding: 'var(--space-xl)'
           }}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -184,7 +189,11 @@ const ProfileScreen: React.FC = () => {
 
         {/* Achievement Showcase */}
         <motion.div
-          className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/50"
+          className="glass-card-strong"
+          style={{
+            padding: 'var(--space-xl)',
+            background: 'rgba(255,255,255,0.8)'
+          }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
@@ -221,7 +230,11 @@ const ProfileScreen: React.FC = () => {
 
         {/* Recent Activity */}
         <motion.div
-          className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/50"
+          className="glass-card-strong"
+          style={{
+            padding: 'var(--space-xl)',
+            background: 'rgba(255,255,255,0.8)'
+          }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -253,7 +266,11 @@ const ProfileScreen: React.FC = () => {
         {/* Liked Patches Gallery */}
         {likedPatchesData.length > 0 && (
           <motion.div
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/50"
+            className="glass-card-strong"
+            style={{
+              padding: 'var(--space-xl)',
+              background: 'rgba(255,255,255,0.8)'
+            }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
@@ -280,12 +297,32 @@ const ProfileScreen: React.FC = () => {
           </motion.div>
         )}
         
+        {/* Social Button */}
+        <motion.button
+          onClick={() => navigate('/social')}
+          className="w-full btn-glass gradient-success font-bold text-white flex items-center justify-center shadow-lg"
+          style={{
+            padding: 'var(--space-lg)',
+            gap: 'var(--space-sm)',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          whileHover={{ scale: 1.02, boxShadow: '0 20px 40px rgba(16,185,129,0.3)' }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Users className="w-5 h-5" />
+          <span>Friends & Leaderboard</span>
+        </motion.button>
+
         {/* Settings Button */}
         <motion.button
           onClick={() => navigate('/settings')}
-          className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center space-x-2 shadow-lg"
+          className="w-full btn-glass gradient-primary font-bold text-white flex items-center justify-center shadow-lg"
           style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            padding: 'var(--space-lg)',
+            gap: 'var(--space-sm)'
           }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { 
@@ -7,10 +7,12 @@ import {
   User, Lock, Volume2, Smartphone, Wifi, Database
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import { authService } from '../services/auth'
 
 const SettingsScreen: React.FC = () => {
   const navigate = useNavigate()
-  const { currentUser } = useAppStore()
+  const { currentUser, setCurrentUser, loadCurrentUser } = useAppStore()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [notifications, setNotifications] = useState({
     grassChallenges: true,
     fhiUpdates: true,
@@ -31,6 +33,64 @@ const SettingsScreen: React.FC = () => {
     hapticFeedback: true,
     autoGPS: true
   })
+  const [isUpdating, setIsUpdating] = useState(false)
+  
+  // Handle profile picture change
+  const handleProfilePictureChange = () => {
+    fileInputRef.current?.click()
+  }
+  
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !currentUser) return
+    
+    setIsUpdating(true)
+    try {
+      // Generate a unique avatar URL based on file name and timestamp
+      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${file.name}-${Date.now()}`
+      
+      console.log('🖼️ Updating profile picture for user:', currentUser.id)
+      
+      // Update user profile with new avatar
+      await authService.updateProfile(currentUser.id, {
+        avatarUrl: avatarUrl
+      })
+      
+      // Reload user data
+      await loadCurrentUser()
+      console.log('✅ Profile picture updated successfully')
+      alert('Profile picture updated successfully!')
+    } catch (error) {
+      console.error('❌ Failed to update profile picture:', error)
+      alert(`Failed to update profile picture: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+  
+  // Handle sign out
+  const handleSignOut = async () => {
+    if (confirm('Are you sure you want to sign out?')) {
+      try {
+        await authService.signOut()
+        navigate('/')
+      } catch (error) {
+        console.error('Sign out failed:', error)
+        alert('Failed to sign out. Please try again.')
+      }
+    }
+  }
+  
+  // Handle dark mode toggle
+  const handleDarkModeToggle = (enabled: boolean) => {
+    setPreferences(prev => ({ ...prev, darkMode: enabled }))
+    // Apply dark mode to document
+    if (enabled) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }
   
   if (!currentUser) return null
   
@@ -39,10 +99,37 @@ const SettingsScreen: React.FC = () => {
       title: 'Account & Profile',
       icon: User,
       items: [
-        { icon: Camera, label: 'Edit Profile Picture', action: () => {} },
-        { icon: User, label: 'Update Bio & Preferences', action: () => {} },
-        { icon: Share2, label: 'Share Your Profile', action: () => {} },
-        { icon: Heart, label: 'Grass Touching Preferences', action: () => {} },
+        { 
+          icon: Camera, 
+          label: isUpdating ? 'Updating...' : 'Edit Profile Picture', 
+          action: handleProfilePictureChange 
+        },
+        { 
+          icon: User, 
+          label: 'Update Bio & Preferences', 
+          action: () => alert('Bio editing coming soon!') 
+        },
+        { 
+          icon: Share2, 
+          label: 'Share Your Profile', 
+          action: () => {
+            if (navigator.share) {
+              navigator.share({
+                title: 'OnlyGrass Profile',
+                text: `Check out ${currentUser.firstName}'s grass touching stats!`,
+                url: window.location.origin
+              })
+            } else {
+              navigator.clipboard.writeText(window.location.origin)
+              alert('Profile link copied to clipboard!')
+            }
+          }
+        },
+        { 
+          icon: Heart, 
+          label: 'Grass Touching Preferences', 
+          action: () => alert('Preference settings coming soon!') 
+        },
       ]
     },
     {
@@ -158,7 +245,7 @@ const SettingsScreen: React.FC = () => {
           label: 'Dark Mode', 
           toggle: true, 
           value: preferences.darkMode, 
-          onChange: (val: boolean) => setPreferences(prev => ({ ...prev, darkMode: val }))
+          onChange: handleDarkModeToggle
         },
         { 
           icon: Volume2, 
@@ -280,6 +367,7 @@ const SettingsScreen: React.FC = () => {
                     className="px-6 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer"
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
+                    onClick={() => item.action && item.action()}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
@@ -333,6 +421,7 @@ const SettingsScreen: React.FC = () => {
             className="w-full px-6 py-4 flex items-center justify-center space-x-3 text-red-600 hover:bg-red-50/50 transition-colors"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
+            onClick={handleSignOut}
           >
             <LogOut className="w-5 h-5" />
             <span className="font-semibold">Sign Out</span>
@@ -350,6 +439,15 @@ const SettingsScreen: React.FC = () => {
           <div>Made for Berkeley Hackathon</div>
           <div>🌱 Touch grass, not people 🌱</div>
         </motion.div>
+
+        {/* Hidden file input for profile picture */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
 
         </div>
       </div>

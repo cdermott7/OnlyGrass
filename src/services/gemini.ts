@@ -17,7 +17,7 @@ export class GeminiService {
     expectedLocation: { lat: number; lng: number; name: string }
   ): Promise<PhotoValidationResult> {
     // Simulate API processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000))
+    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000))
 
     try {
       // Mock validation logic based on image analysis
@@ -28,12 +28,12 @@ export class GeminiService {
       const hasValidExtension = fileName.includes('.jpg') || fileName.includes('.jpeg') || fileName.includes('.png') || fileName.includes('.heic')
       const hasReasonableSize = fileSize > 50000 && fileSize < 10000000 // 50KB to 10MB
       
-      // Mock image content analysis (in real implementation, this would use actual AI)
-      const mockAnalysis = this.performMockImageAnalysis(fileName, fileSize)
+      // Enhanced mock validation with location awareness
+      const mockAnalysis = this.performEnhancedMockAnalysis(fileName, fileSize, expectedLocation)
       
-      // Generate realistic validation result
-      const confidence = Math.min(95, Math.max(60, 80 + (Math.random() - 0.5) * 30))
-      const isValid = true // Always return true for testing
+      // Generate realistic validation result with location-based logic
+      const confidence = Math.min(95, Math.max(40, mockAnalysis.baseConfidence + (Math.random() - 0.5) * 20))
+      const isValid = hasValidExtension && hasReasonableSize && mockAnalysis.passesLocationCheck && mockAnalysis.hasGrassContent
       
       if (isValid) {
         const successMessages = [
@@ -68,14 +68,26 @@ export class GeminiService {
           "Ensure you're actually outdoors and your hand is making clear contact with real grass or vegetation."
         ]
         
+        let failureReason = "Validation failed: "
+        
+        if (!mockAnalysis.hasGrassContent) {
+          failureReason += "No grass detected in image. "
+        }
+        if (!mockAnalysis.passesLocationCheck) {
+          failureReason += "Location doesn't match expected area. "
+        }
+        if (!mockAnalysis.hasHumanPresence) {
+          failureReason += "No human contact visible. "
+        }
+        
         return {
           isValid: false,
           confidence: Math.round(confidence * 0.6),
-          reason: failureReasons[Math.floor(Math.random() * failureReasons.length)],
-          hasGrass: mockAnalysis.hasGrass,
-          hasHuman: mockAnalysis.hasHuman,
-          location: 'Location unclear from image',
-          feedback: improvementTips[Math.floor(Math.random() * improvementTips.length)]
+          reason: failureReason.trim() || failureReasons[Math.floor(Math.random() * failureReasons.length)],
+          hasGrass: mockAnalysis.hasGrassContent,
+          hasHuman: mockAnalysis.hasHumanPresence,
+          location: `Expected: ${expectedLocation.name}`,
+          feedback: "Ensure you're at the correct location and clearly show grass contact."
         }
       }
     } catch (error) {
@@ -94,6 +106,79 @@ export class GeminiService {
     }
   }
 
+  private performEnhancedMockAnalysis(fileName: string, fileSize: number, expectedLocation: { lat: number; lng: number; name: string }) {
+    // Simulate more sophisticated validation
+    const hasGrassKeywords = fileName.includes('grass') || fileName.includes('park') || fileName.includes('field')
+    const isReasonableSize = fileSize > 100000 && fileSize < 8000000
+    
+    // Mock location-based validation (simulate checking if photo could be from expected location)
+    const locationName = expectedLocation.name.toLowerCase()
+    const isKnownParkLocation = locationName.includes('park') || locationName.includes('garden') || locationName.includes('field')
+    
+    // Simulate GPS location validation with 500m radius
+    const passesLocationRadius = this.simulateLocationCheck(expectedLocation)
+    
+    // Simulate random validation failures to make it realistic (30% chance of failure)
+    const randomFactor = Math.random()
+    const passesGrassCheck = randomFactor > 0.2 // 80% chance of detecting grass
+    const passesLocationCheck = passesLocationRadius && (randomFactor > 0.15) // 85% chance if within radius
+    const passesHumanCheck = randomFactor > 0.1 // 90% chance of detecting human
+    
+    // Calculate base confidence
+    let baseConfidence = 50
+    if (hasGrassKeywords) baseConfidence += 15
+    if (isReasonableSize) baseConfidence += 10
+    if (isKnownParkLocation) baseConfidence += 10
+    if (passesGrassCheck) baseConfidence += 15
+    if (passesLocationCheck) baseConfidence += 10
+    
+    return {
+      hasGrassContent: passesGrassCheck,
+      passesLocationCheck: passesLocationCheck && isKnownParkLocation,
+      hasHumanPresence: passesHumanCheck,
+      baseConfidence,
+      passesBasicChecks: isReasonableSize && passesGrassCheck && passesHumanCheck
+    }
+  }
+  
+  private simulateLocationCheck(expectedLocation: { lat: number; lng: number; name: string }): boolean {
+    // Simulate getting user's current location and checking if within 500m
+    // In a real implementation, this would use navigator.geolocation
+    
+    // Mock current location (simulate user being somewhere around Berkeley)
+    const mockUserLat = expectedLocation.lat + (Math.random() - 0.5) * 0.01 // ~500m variation
+    const mockUserLng = expectedLocation.lng + (Math.random() - 0.5) * 0.01
+    
+    // Calculate distance using Haversine formula
+    const distance = this.calculateDistance(
+      expectedLocation.lat,
+      expectedLocation.lng,
+      mockUserLat,
+      mockUserLng
+    )
+    
+    console.log(`📍 Location validation: Expected (${expectedLocation.lat}, ${expectedLocation.lng}), Mock user (${mockUserLat}, ${mockUserLng}), Distance: ${distance}m`)
+    
+    // Return true if within 500m radius
+    return distance <= 500
+  }
+  
+  private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371000 // Earth's radius in meters
+    const dLat = this.toRadians(lat2 - lat1)
+    const dLng = this.toRadians(lng2 - lng1)
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
+      Math.sin(dLng/2) * Math.sin(dLng/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    return R * c
+  }
+  
+  private toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180)
+  }
+  
   private performMockImageAnalysis(fileName: string, fileSize: number): {
     hasGrass: boolean
     hasHuman: boolean
