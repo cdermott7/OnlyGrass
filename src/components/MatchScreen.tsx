@@ -28,7 +28,7 @@ const MatchScreen: React.FC = () => {
       <div className="h-full flex items-center justify-center px-4">
         <div className="max-w-md mx-auto">
           <div className="text-center">
-            <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-grass-400 to-grass-600 flex items-center justify-center">
+            <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
               <Users className="w-16 h-16 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">No Matches Yet</h2>
@@ -37,7 +37,7 @@ const MatchScreen: React.FC = () => {
             </p>
             <button
               onClick={() => navigate('/')}
-              className="px-8 py-3 bg-gradient-to-r from-grass-500 to-grass-600 text-white rounded-full font-semibold hover:shadow-lg transition-all duration-200"
+              className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-semibold hover:shadow-lg transition-all duration-200"
             >
               Start Swiping
             </button>
@@ -48,7 +48,7 @@ const MatchScreen: React.FC = () => {
   }
   
   return (
-    <div className="h-full overflow-y-auto pt-4 pb-32 px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="h-full overflow-y-auto pt-4 pb-40 px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -77,7 +77,7 @@ const MatchScreen: React.FC = () => {
                 {/* Patch Image */}
                 <div className="w-24 h-24 flex-shrink-0">
                   <img
-                    src={match.patch.images[0]}
+                    src={match.patch.satelliteImageUrl}
                     alt={match.patch.name}
                     className="w-full h-full object-cover"
                   />
@@ -91,7 +91,7 @@ const MatchScreen: React.FC = () => {
                     </h3>
                     <div className="flex items-center space-x-1">
                       <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                      <span className="text-xs text-gray-600">{match.patch.rating}</span>
+                      <span className="text-xs text-gray-600">{match.patch.difficultyRating}/5</span>
                     </div>
                   </div>
                   

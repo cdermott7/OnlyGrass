@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Home, Heart, User, Compass } from 'lucide-react'
+import { Home, Target, User, Compass } from 'lucide-react'
 
 const Navigation: React.FC = () => {
   const location = useLocation()
@@ -9,14 +9,14 @@ const Navigation: React.FC = () => {
   
   const tabs = [
     { path: '/', icon: Home, label: 'Discover' },
-    { path: '/matches', icon: Heart, label: 'Matches' },
+    { path: '/challenges', icon: Target, label: 'Challenges' },
     { path: '/explore', icon: Compass, label: 'Explore' },
     { path: '/profile', icon: User, label: 'Profile' },
   ]
   
   return (
     <motion.div
-      className="absolute bottom-6 left-4 right-4 z-40 flex justify-center"
+      className="absolute bottom-2 left-4 right-4 z-40 flex justify-center"
       initial={{ y: 100, opacity: 0, scale: 0.8 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       transition={{ 

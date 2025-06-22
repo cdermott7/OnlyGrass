@@ -24,13 +24,11 @@ const ProfileScreen: React.FC = () => {
   }
 
   return (
-    <div className="h-full bg-gradient-to-br from-slate-50 via-white to-emerald-50 relative">
+    <div className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 relative overflow-hidden">
       <div 
         className="h-full overflow-y-auto pt-6 pb-40 px-4" 
         style={{ 
-          WebkitOverflowScrolling: 'touch',
-          overflowY: 'scroll',
-          maxHeight: '100vh'
+          WebkitOverflowScrolling: 'touch'
         }}
       >
         <div className="max-w-md mx-auto space-y-6">

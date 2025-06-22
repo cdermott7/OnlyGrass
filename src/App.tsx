@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import SwipeScreen from './components/SwipeScreen'
@@ -11,10 +11,40 @@ import ExploreScreen from './components/ExploreScreen'
 import ChallengeScreen from './components/ChallengeScreen'
 import Navigation from './components/Navigation'
 import GrassBotChat from './components/GrassBotChat'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AuthScreen } from './components/auth/AuthScreen'
+import { DatabaseStatus } from './components/DatabaseStatus'
+import { LocationPrompt } from './components/LocationPrompt'
+import { useAppStore } from './store/useAppStore'
 
-function App() {
+function AppContent() {
+  const { user, loading } = useAuth()
+  const { initializeLocation } = useAppStore()
+
+  useEffect(() => {
+    // Initialize the app when user is logged in
+    if (user) {
+      initializeLocation()
+    }
+  }, [user, initializeLocation])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🌱</div>
+          <div className="text-white text-xl font-semibold">Loading OnlyGrass...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthScreen />
+  }
   return (
     <Router>
+      <DatabaseStatus />
       {/* Premium Mobile Container */}
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black flex items-center justify-center p-4">
         {/* Ambient Light Effects */}
@@ -58,8 +88,11 @@ function App() {
               }}
             />
             
+            {/* Location Prompt - inside iPhone container */}
+            <LocationPrompt />
+            
             {/* Main App Content */}
-            <div className="relative h-full" style={{ paddingTop: '40px' }}>
+            <div className="relative h-full overflow-hidden" style={{ paddingTop: '40px' }}>
           <AnimatePresence mode="wait">
             <Routes>
               <Route path="/" element={
@@ -72,14 +105,14 @@ function App() {
                   <SwipeScreen />
                 </motion.div>
               } />
-              <Route path="/matches" element={
+              <Route path="/challenges" element={
                 <motion.div
                   initial={{ opacity: 0, x: 100 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -100 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <MatchScreen />
+                  <ChallengeScreen />
                 </motion.div>
               } />
               <Route path="/profile" element={
@@ -132,16 +165,6 @@ function App() {
                   <SessionCompleteScreen />
                 </motion.div>
               } />
-              <Route path="/challenges" element={
-                <motion.div
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -50 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <ChallengeScreen />
-                </motion.div>
-              } />
             </Routes>
           </AnimatePresence>
           
@@ -152,6 +175,14 @@ function App() {
         </div>
       </div>
     </Router>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 

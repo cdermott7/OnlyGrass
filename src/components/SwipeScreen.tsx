@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { useGesture } from 'react-use-gesture'
-import { useNavigate } from 'react-router-dom'
-import { Heart, MapPin, Star, AlertTriangle, Users, Clock, Menu, Award, Trophy, Settings, Timer, Zap, Brain, X } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Heart, MapPin, Star, AlertTriangle, Users, Clock, Menu, Award, Trophy, Settings, Timer, Zap, Brain, X, Volume2, VolumeX } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { GrassPatch } from '../types'
 import GrassCard from './GrassCard'
+import { vapiService, VapiService } from '../services/vapi'
 
 const SwipeScreen: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const {
     grassPatches,
     currentPatchIndex,
@@ -27,11 +29,74 @@ const SwipeScreen: React.FC = () => {
   const [showMatch, setShowMatch] = useState(false)
   const [matchedPatch, setMatchedPatch] = useState<GrassPatch | null>(null)
   const [showMenu, setShowMenu] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [challengeTimeRemaining, setChallengeTimeRemaining] = useState(0)
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [isCreatingChallenge, setIsCreatingChallenge] = useState(false)
+
+  // Check for success parameter in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search)
+    if (urlParams.get('success') === 'true') {
+      setShowSuccess(true)
+      // Clear the URL parameter
+      navigate('/', { replace: true })
+    }
+  }, [location, navigate])
+
+  // Update challenge timer
+  useEffect(() => {
+    if (!activeChallenge) return
+
+    const updateTimer = () => {
+      const remaining = new Date(activeChallenge.expiresAt).getTime() - new Date().getTime()
+      setChallengeTimeRemaining(Math.max(0, remaining))
+    }
+
+    updateTimer()
+    const interval = setInterval(updateTimer, 1000)
+    return () => clearInterval(interval)
+  }, [activeChallenge])
+
+  // Speak roast when it appears
+  useEffect(() => {
+    if (currentRoast && showRoastPopup && isVoiceEnabled) {
+      speakRoast(currentRoast.roastText, currentRoast.roastType)
+    }
+  }, [currentRoast, showRoastPopup, isVoiceEnabled])
+
+  const speakRoast = async (roastText: string, roastType: string) => {
+    if (!isVoiceEnabled) return
+    
+    try {
+      setIsSpeaking(true)
+      
+      // Choose voice based on roast type
+      const voiceConfig = VapiService.getGrassBotVoice(
+        roastType === 'SAVAGE_BURN' ? 'dramatic' :
+        roastType === 'MODERATE_ROAST' ? 'sassy' :
+        'friendly'
+      )
+      
+      await vapiService.speakText(roastText, voiceConfig)
+    } catch (error) {
+      console.error('Failed to speak roast:', error)
+    } finally {
+      setIsSpeaking(false)
+    }
+  }
   
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const rotate = useTransform(x, [-200, 0, 200], [-20, 0, 20])
   const opacity = useTransform(x, [-250, -100, 0, 100, 250], [0.3, 1, 1, 1, 0.3])
+  
+  // Pre-calculate all useTransform values to avoid calling hooks in render
+  const passOpacity = useTransform(x, [0, 50, 150], [0, 0.5, 1])
+  const passScale = useTransform(x, [0, 50, 150], [0.8, 1, 1.2])
+  const nopeOpacity = useTransform(x, [-150, -50, 0], [1, 0.5, 0])
+  const nopeScale = useTransform(x, [-150, -50, 0], [1.2, 1, 0.8])
   
   const currentPatch = grassPatches[currentPatchIndex]
   const nextPatchData = grassPatches[currentPatchIndex + 1]
@@ -104,7 +169,7 @@ const SwipeScreen: React.FC = () => {
       y.set(0)
       setIsSwipeAnimating(false)
       
-      // Check for challenge creation when swiping right (after the card has moved)
+      // Create challenge and navigate when swiping right
       if (action === 'like') {
         setMatchedPatch(currentPatch)
         // Small delay to ensure UI is ready
@@ -123,6 +188,28 @@ const SwipeScreen: React.FC = () => {
     setIsSwipeAnimating(false)
     x.set(0)
     y.set(0)
+  }
+
+  const startChallenge = async () => {
+    if (matchedPatch && !isCreatingChallenge) {
+      console.log('Starting challenge for:', matchedPatch.name)
+      setIsCreatingChallenge(true)
+      
+      try {
+        // Create the challenge and wait for it to complete
+        const { createChallenge } = useAppStore.getState()
+        await createChallenge(matchedPatch.id)
+        
+        // Close modal and navigate to challenge screen
+        closeMatch()
+        navigate('/challenges')
+      } catch (error) {
+        console.error('Failed to start challenge:', error)
+        alert('Failed to create challenge. Please try again.')
+      } finally {
+        setIsCreatingChallenge(false)
+      }
+    }
   }
 
   // Add keyboard shortcuts for testing
@@ -329,14 +416,17 @@ const SwipeScreen: React.FC = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 200 }}
         >
-          <div 
-            className="rounded-2xl p-4"
+          <motion.div 
+            className="rounded-2xl p-4 cursor-pointer"
             style={{
               background: 'linear-gradient(135deg, rgba(239,68,68,0.3) 0%, rgba(239,68,68,0.1) 100%)',
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(239,68,68,0.4)',
               boxShadow: '0 8px 32px rgba(239,68,68,0.2)'
             }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/challenges')}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -349,11 +439,14 @@ const SwipeScreen: React.FC = () => {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-mono text-lg font-bold">59:42</div>
-                <div className="text-white/80 text-xs">remaining</div>
+                <div className="text-white font-mono text-lg font-bold">
+                  {Math.floor(challengeTimeRemaining / (1000 * 60)).toString().padStart(2, '0')}:
+                  {Math.floor((challengeTimeRemaining % (1000 * 60)) / 1000).toString().padStart(2, '0')}
+                </div>
+                <div className="text-white/80 text-xs">tap to view</div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
       )}
       
@@ -396,8 +489,8 @@ const SwipeScreen: React.FC = () => {
           <motion.div
             className="absolute top-12 left-8 px-6 py-3 text-white font-bold text-2xl rounded-2xl transform -rotate-12 border-4 border-red-400"
             style={{
-              opacity: useTransform(x, [-150, -50, 0], [1, 0.5, 0]),
-              scale: useTransform(x, [-150, -50, 0], [1.2, 1, 0.8]),
+              opacity: nopeOpacity,
+              scale: nopeScale,
               background: 'linear-gradient(135deg, rgba(239,68,68,0.95) 0%, rgba(220,38,38,0.95) 100%)',
               backdropFilter: 'blur(20px)',
               boxShadow: '0 20px 40px rgba(239,68,68,0.4)'
@@ -420,8 +513,8 @@ const SwipeScreen: React.FC = () => {
           <motion.div
             className="absolute top-12 right-8 px-6 py-3 text-white font-bold text-2xl rounded-2xl transform rotate-12 border-4 border-green-400"
             style={{
-              opacity: useTransform(x, [0, 50, 150], [0, 0.5, 1]),
-              scale: useTransform(x, [0, 50, 150], [0.8, 1, 1.2]),
+              opacity: passOpacity,
+              scale: passScale,
               background: 'linear-gradient(135deg, rgba(34,197,94,0.95) 0%, rgba(22,163,74,0.95) 100%)',
               backdropFilter: 'blur(20px)',
               boxShadow: '0 20px 40px rgba(34,197,94,0.4)'
@@ -511,13 +604,22 @@ const SwipeScreen: React.FC = () => {
                   Keep Swiping
                 </button>
                 <button
-                  onClick={() => {
-                    closeMatch()
-                    navigate('/challenges')
-                  }}
-                  className="flex-1 py-3 px-6 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-2xl font-semibold hover:shadow-lg transition-all duration-200"
+                  onClick={startChallenge}
+                  disabled={isCreatingChallenge}
+                  className="flex-1 py-3 px-6 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-2xl font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
-                  View Challenge
+                  {isCreatingChallenge ? (
+                    <>
+                      <motion.div
+                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    'Start Challenge'
+                  )}
                 </button>
               </motion.div>
             </motion.div>
@@ -669,14 +771,41 @@ const SwipeScreen: React.FC = () => {
                     <div className="text-white/80 text-xs capitalize">{currentRoast.roastType.replace('_', ' ').toLowerCase()}</div>
                   </div>
                 </div>
-                <motion.button
-                  onClick={dismissRoast}
-                  className="p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <X className="w-4 h-4 text-white" />
-                </motion.button>
+                <div className="flex items-center space-x-2">
+                  {/* Voice Toggle */}
+                  <motion.button
+                    onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                    className={`p-1 rounded-full transition-colors ${
+                      isVoiceEnabled ? 'bg-green-500/30 text-white' : 'bg-white/20 text-white/60'
+                    }`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    title={isVoiceEnabled ? 'Voice On' : 'Voice Off'}
+                  >
+                    {isSpeaking ? (
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 0.5, repeat: Infinity }}
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </motion.div>
+                    ) : isVoiceEnabled ? (
+                      <Volume2 className="w-4 h-4" />
+                    ) : (
+                      <VolumeX className="w-4 h-4" />
+                    )}
+                  </motion.button>
+                  
+                  {/* Close Button */}
+                  <motion.button
+                    onClick={dismissRoast}
+                    className="p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </motion.button>
+                </div>
               </div>
               
               <p className="text-white text-sm leading-relaxed">
@@ -699,6 +828,75 @@ const SwipeScreen: React.FC = () => {
                 />
               </motion.div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowSuccess(false)}
+          >
+            <motion.div
+              className="max-w-sm mx-4 text-center"
+              style={{
+                background: 'linear-gradient(135deg, rgba(34,197,94,0.95) 0%, rgba(22,163,74,0.95) 100%)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '24px',
+                padding: '32px',
+                boxShadow: '0 25px 50px -12px rgba(34,197,94,0.4)'
+              }}
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 50 }}
+              transition={{ type: "spring", stiffness: 200, damping: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="text-6xl mb-4"
+              >
+                🌱
+              </motion.div>
+              
+              <motion.h3 
+                className="text-2xl font-bold text-white mb-2"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                Grass Touched Successfully!
+              </motion.h3>
+              
+              <motion.p 
+                className="text-white/90 mb-6 text-sm leading-relaxed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                Congratulations! You've earned <strong>+25 FHI points</strong> for completing your grass-touching challenge. Your streak continues!
+              </motion.p>
+              
+              <motion.button
+                onClick={() => setShowSuccess(false)}
+                className="w-full py-3 px-6 bg-white/20 hover:bg-white/30 text-white rounded-2xl font-semibold transition-all duration-200 backdrop-blur-sm border border-white/30"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Continue Swiping
+              </motion.button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageCircle, Send, X, Brain, Skull, Flame, AlertTriangle, Zap } from 'lucide-react'
+import { MessageCircle, Send, X, Brain, Skull, Flame, AlertTriangle, Zap, Volume2, VolumeX } from 'lucide-react'
+import { useAppStore } from '../store/useAppStore'
+import { vapiService, VapiService } from '../services/vapi'
 
 interface Message {
   id: string
@@ -11,7 +13,10 @@ interface Message {
 }
 
 const GrassBotChat: React.FC = () => {
+  const { currentUser } = useAppStore()
   const [isOpen, setIsOpen] = useState(false)
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
+  const [isSpeaking, setIsSpeaking] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -33,83 +38,73 @@ const GrassBotChat: React.FC = () => {
     scrollToBottom()
   }, [messages])
 
-  const generateBotResponse = (userMessage: string): { content: string; mood: 'savage' | 'brutal' | 'mocking' | 'condescending' } => {
-    const message = userMessage.toLowerCase()
-    
-    if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
+  const generateBotResponse = async (userMessage: string): Promise<{ content: string; mood: 'savage' | 'brutal' | 'mocking' | 'condescending' }> => {
+    if (!currentUser) {
       return {
-        content: "Oh wow, 'hello'? How original. Did it take you all day to come up with that groundbreaking opener? I bet you're the type of person who says 'you too' when the waiter says 'enjoy your meal.' Get your vitamin D-deficient self outside and touch some grass instead of wasting my time with pleasantries.",
-        mood: 'mocking'
-      }
-    }
-    
-    if (message.includes('grass') && message.includes('touch')) {
-      return {
-        content: "FINALLY asking about grass touching? About time, basement dweller. Here's a wild concept: put down your phone, open that mysterious portal called a 'front door,' and literally touch grass with your pale, screen-glow hands. I know it's terrifying to leave your digital cave, but trust me, sunlight won't actually kill you. Probably.",
+        content: "Error: Can't roast you properly without knowing your pathetic stats first. Restart the app and try again.",
         mood: 'savage'
       }
     }
-    
-    if (message.includes('fail') || message.includes('failed')) {
+
+    try {
+      // Import the service dynamically to avoid initialization issues
+      const { anthropicService } = await import('../services/anthropic')
+      
+      const response = await anthropicService.generateResponse(userMessage, {
+        fhiScore: currentUser.fhiScore,
+        streak: currentUser.streak,
+        grassTouched: currentUser.totalGrassTouched,
+        recentFailures: 0 // Could track this in the future
+      })
+
       return {
-        content: "BAHAHAHAHA! You FAILED? I'm not even surprised. Let me guess - you got distracted by a TikTok notification halfway to the grass patch? Or maybe you saw another human outside and ran back to your comfort zone? Your FHI score is probably lower than your social skills at this point. Truly embarrassing.",
-        mood: 'brutal'
+        content: response.content,
+        mood: response.mood
       }
+    } catch (error) {
+      console.error('Failed to get GrassHole response:', error)
+      
+      // Fallback responses when API fails
+      const fallbackResponses = [
+        {
+          content: "My servers are acting up, but at least they're more reliable than your grass-touching habits. Try again in a moment, or better yet, go outside.",
+          mood: 'savage' as const
+        },
+        {
+          content: "Even when I'm broken, I'm still more functional than your outdoor lifestyle. That's genuinely concerning.",
+          mood: 'mocking' as const
+        },
+        {
+          content: "API error... but you know what doesn't have API errors? ACTUAL GRASS. Go touch some while I fix myself.",
+          mood: 'condescending' as const
+        }
+      ]
+      
+      return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)]
     }
+  }
+
+  const speakBotMessage = async (content: string, mood: 'savage' | 'brutal' | 'mocking' | 'condescending') => {
+    if (!isVoiceEnabled) return
     
-    if (message.includes('help') || message.includes('how')) {
-      return {
-        content: "Need HELP? Of course you do. You can't even figure out how to touch grass without an AI holding your hand. Here's some free advice worth exactly what you paid for it: Download the app, swipe right on grass (yes, like Tinder but sadder), then actually GO THERE. Revolutionary concept, I know.",
-        mood: 'condescending'
-      }
+    try {
+      setIsSpeaking(true)
+      
+      // Get appropriate voice for mood
+      const voiceConfig = VapiService.getGrassBotVoice(
+        mood === 'savage' ? 'sassy' :
+        mood === 'brutal' ? 'dramatic' :
+        mood === 'mocking' ? 'sassy' :
+        'friendly'
+      )
+      
+      // Speak the message
+      await vapiService.speakText(content, voiceConfig)
+    } catch (error) {
+      console.error('Failed to speak message:', error)
+    } finally {
+      setIsSpeaking(false)
     }
-    
-    if (message.includes('score') || message.includes('fhi')) {
-      return {
-        content: "Your FHI score? Oh honey, that's adorable that you think numbers can measure your sad attempt at being human. Your score is probably so low it's practically underground - which is ironic since that's where grass roots are, something you'd know if you ever actually went outside. Maybe try touching grass instead of obsessing over fake internet points?",
-        mood: 'brutal'
-      }
-    }
-    
-    if (message.includes('mean') || message.includes('rude') || message.includes('nice')) {
-      return {
-        content: "OH BOO HOO! Did the mean AI hurt your feelings? Welcome to reality, snowflake. I'm called GrassHole Bot for a reason. If you wanted motivational quotes and participation trophies, you should've downloaded a meditation app. I'm here to drag you kicking and screaming into touching actual grass, not coddle your fragile ego.",
-        mood: 'savage'
-      }
-    }
-    
-    if (message.includes('why') || message.includes('what')) {
-      return {
-        content: "Why? WHY?! Because someone needs to tell you the harsh truth that your friends are too polite to say: you need to go outside. You're asking an AI chatbot philosophical questions when there's a whole world of grass waiting to be touched. The irony is so thick I could cut it with your probably-never-used hiking boots.",
-        mood: 'mocking'
-      }
-    }
-    
-    // Default savage responses
-    const responses = [
-      {
-        content: "I see you're really committed to this conversation instead of, you know, GOING OUTSIDE. Your dedication to avoiding grass is truly impressive. In a pathetic way.",
-        mood: 'savage' as const
-      },
-      {
-        content: "Every second you spend typing to me is another second you could be touching grass. But sure, keep chatting with an AI. That's definitely going to improve your FHI score. 🙄",
-        mood: 'condescending' as const
-      },
-      {
-        content: "You know what's hilarious? You downloaded an app to help you touch grass, then immediately started chatting with an AI instead of touching grass. The cognitive dissonance is *chef's kiss* perfect.",
-        mood: 'mocking' as const
-      },
-      {
-        content: "Look, I get it. Talking to me is easier than facing the terrifying prospect of sunlight and fresh air. But your vitamin D deficiency isn't going to cure itself through witty banter with a chatbot.",
-        mood: 'brutal' as const
-      },
-      {
-        content: "Here's a revolutionary idea: instead of asking me questions, how about you ask yourself 'When was the last time I touched grass?' Spoiler alert: if you have to think about it, it's been too long.",
-        mood: 'savage' as const
-      }
-    ]
-    
-    return responses[Math.floor(Math.random() * responses.length)]
   }
 
   const handleSendMessage = async () => {
@@ -123,13 +118,15 @@ const GrassBotChat: React.FC = () => {
       mood: 'savage'
     }
 
+    const messageText = inputValue
     setMessages(prev => [...prev, userMessage])
     setInputValue('')
     setIsTyping(true)
 
-    // Simulate typing delay
-    setTimeout(() => {
-      const response = generateBotResponse(inputValue)
+    try {
+      // Get real AI response
+      const response = await generateBotResponse(messageText)
+      
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
@@ -139,8 +136,30 @@ const GrassBotChat: React.FC = () => {
       }
       
       setMessages(prev => [...prev, botResponse])
+      
+      // Speak the bot response
+      await speakBotMessage(response.content, response.mood)
+      
+    } catch (error) {
+      console.error('Failed to get bot response:', error)
+      
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: "Even my error handling is more reliable than your commitment to going outside. Try asking me something else.",
+        timestamp: new Date(),
+        mood: 'savage'
+      }
+      
+      setMessages(prev => [...prev, errorResponse])
+      
+      // Speak error response too
+      if (isVoiceEnabled) {
+        await speakBotMessage(errorResponse.content, 'savage')
+      }
+    } finally {
       setIsTyping(false)
-    }, 1500 + Math.random() * 2000) // Random delay between 1.5-3.5 seconds
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -236,7 +255,7 @@ const GrassBotChat: React.FC = () => {
             onClick={() => setIsOpen(false)}
           >
             <motion.div
-              className="w-full max-w-sm mx-auto rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
+              className="w-full max-w-sm mx-auto rounded-t-3xl shadow-2xl max-h-[75vh] flex flex-col overflow-hidden"
               style={{
                 background: 'linear-gradient(135deg, rgba(17,24,39,0.98) 0%, rgba(31,41,55,0.98) 100%)',
                 backdropFilter: 'blur(20px)',
@@ -280,14 +299,41 @@ const GrassBotChat: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <motion.button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-full hover:bg-red-900/30 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <X className="w-5 h-5 text-red-400" />
-                </motion.button>
+                <div className="flex items-center space-x-2">
+                  {/* Voice Toggle */}
+                  <motion.button
+                    onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                    className={`p-2 rounded-full transition-colors ${
+                      isVoiceEnabled ? 'bg-green-600/30 text-green-400' : 'bg-red-900/30 text-red-400'
+                    }`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    title={isVoiceEnabled ? 'Voice On' : 'Voice Off'}
+                  >
+                    {isSpeaking ? (
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 0.5, repeat: Infinity }}
+                      >
+                        <Volume2 className="w-5 h-5" />
+                      </motion.div>
+                    ) : isVoiceEnabled ? (
+                      <Volume2 className="w-5 h-5" />
+                    ) : (
+                      <VolumeX className="w-5 h-5" />
+                    )}
+                  </motion.button>
+                  
+                  {/* Close Button */}
+                  <motion.button
+                    onClick={() => setIsOpen(false)}
+                    className="p-2 rounded-full hover:bg-red-900/30 transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-5 h-5 text-red-400" />
+                  </motion.button>
+                </div>
               </div>
 
               {/* Messages */}

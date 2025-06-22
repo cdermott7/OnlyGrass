@@ -93,7 +93,7 @@ const BookingScreen: React.FC = () => {
   }
   
   return (
-    <div className="h-full overflow-y-auto pt-4 pb-32 px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="h-full overflow-y-auto pt-4 pb-40 px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center mb-6">

@@ -203,7 +203,7 @@ const SessionCompleteScreen: React.FC = () => {
           // Review Form
           <motion.div
             key="review"
-            className="h-full overflow-y-auto pt-8 pb-32 px-4"
+            className="h-full overflow-y-auto pt-8 pb-40 px-4"
             style={{ WebkitOverflowScrolling: 'touch' }}
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}

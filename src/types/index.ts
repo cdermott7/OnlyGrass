@@ -70,6 +70,8 @@ export interface GrassChallenge {
   submissionImageUrl?: string
   geminiVerified: boolean
   fhiPointsAwarded: number
+  validationAttempts?: number
+  validationResult?: any
 }
 
 export interface SwipeAction {
