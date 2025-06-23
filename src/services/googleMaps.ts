@@ -77,14 +77,14 @@ export class GoogleMapsService {
     }
 
     try {
-      // Use the new Place API instead of deprecated PlacesService
+      // Use the new Place API with correct field names
       const request = {
-        fields: ['place_id', 'displayName', 'location', 'formattedAddress', 'vicinity'],
+        fields: ['id', 'displayName', 'location', 'formattedAddress'],
         locationRestriction: {
           center: { lat: userLocation.lat, lng: userLocation.lng },
           radius: radiusKm * 1000 // Convert km to meters
         },
-        includedTypes: ['park', 'tourist_attraction', 'establishment'],
+        includedTypes: ['park', 'tourist_attraction', 'amusement_park', 'campground', 'national_park'],
         maxResultCount: 20
       }
 
@@ -110,8 +110,8 @@ export class GoogleMapsService {
             const grassLocation: GrassLocation = {
               lat,
               lng,
-              address: place.formattedAddress || place.vicinity || 'Unknown location',
-              city: this.extractCity(place.formattedAddress || place.vicinity || ''),
+              address: place.formattedAddress || place.displayName?.text || 'Unknown location',
+              city: this.extractCity(place.formattedAddress || place.displayName?.text || ''),
               placeId: place.id,
               satelliteImageUrl: this.generateSatelliteImageUrl(lat, lng),
               distanceFromUser: Math.round(distance)

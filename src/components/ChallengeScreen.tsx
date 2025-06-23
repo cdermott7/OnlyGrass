@@ -451,7 +451,12 @@ const ChallengeScreen: React.FC = () => {
                                   animate={{ rotate: 360 }}
                                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                 />
-                                <span>Validating with AI...</span>
+                                <span>
+                  {Math.abs(activeChallenge.patch.location.lat - 37.8719) < 0.01 && 
+                   Math.abs(activeChallenge.patch.location.lng - (-122.2585)) < 0.01
+                    ? 'Validating with AI...' 
+                    : 'Validating with AI...'}
+                </span>
                               </>
                             ) : (
                               <>

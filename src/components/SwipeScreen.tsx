@@ -101,126 +101,104 @@ const SwipeScreen: React.FC = () => {
   const currentPatch = grassPatches[currentPatchIndex]
   const nextPatchData = grassPatches[currentPatchIndex + 1]
   
-  // Debug logging
-  console.log('🌱 Current patch index:', currentPatchIndex, 'Total patches:', grassPatches.length)
-  console.log('🌱 Current patch:', currentPatch?.name)
-  console.log('🌱 Next patch:', nextPatchData?.name)
+  // Production mode - remove debug logging
+  // React.useEffect(() => {
+  //   console.log(`📍 Patch index changed to:`, currentPatchIndex)
+  // }, [currentPatchIndex])
   
+  // Track if we've already swiped during this gesture
+  const [gestureComplete, setGestureComplete] = useState(false)
+
   const bind = useGesture({
-    onDrag: ({ offset: [dx, dy], velocity, direction: [xDir], cancel, down }) => {
-      if (isSwipeAnimating || showMatch) return
-      
-      // Improved physics with better constraints
+    onDragStart: () => {
+      setGestureComplete(false)
+      setIsSwipeAnimating(false)
+    },
+    onDrag: ({ offset: [dx, dy], down }) => {
+      // Visual feedback
       x.set(dx)
-      y.set(dy * 0.2) // Reduce vertical movement further
+      y.set(dy * 0.1)
       
-      // Dynamic threshold based on velocity and distance - lowered for better responsiveness
-      const isFlick = Math.abs(velocity[0]) > 0.3
-      const threshold = isFlick ? 50 : 100
+      // Prevent multiple triggers if already processing
+      if (gestureComplete || isSwipeAnimating) return
       
-      // More responsive swipe detection for both directions
-      if (Math.abs(dx) > threshold && down) {
-        cancel()
-        console.log('🔄 Swipe detected:', xDir > 0 ? 'RIGHT (like)' : 'LEFT (dislike)', 'dx:', dx, 'velocity:', velocity[0])
-        handleSwipe(xDir > 0 ? 'like' : 'dislike')
+      // Simple threshold - when card is dragged far enough
+      if (Math.abs(dx) > 120 && down) {
+        setGestureComplete(true)
+        setIsSwipeAnimating(true)
+        handleSwipe(dx > 0 ? 'like' : 'dislike')
       }
     },
     onDragEnd: ({ offset: [dx], velocity }) => {
-      if (isSwipeAnimating || showMatch) return
-      
-      // Enhanced swipe detection on drag end for missed swipes
-      const isSwipeVelocity = Math.abs(velocity[0]) > 0.2
-      const isSwipeDistance = Math.abs(dx) > 80
-      
-      if (isSwipeVelocity || isSwipeDistance) {
-        console.log('🔄 Drag end swipe detected:', dx > 0 ? 'RIGHT (like)' : 'LEFT (dislike)', 'dx:', dx, 'velocity:', velocity[0])
-        handleSwipe(dx > 0 ? 'like' : 'dislike')
-      } else {
-        // Smoother return animation with spring physics
-        x.set(0)
-        y.set(0)
+      // Only process if we haven't already completed this gesture
+      if (!gestureComplete && !isSwipeAnimating) {
+        const isSwipe = Math.abs(velocity[0]) > 0.4 || Math.abs(dx) > 80
+        
+        if (isSwipe) {
+          setGestureComplete(true)
+          setIsSwipeAnimating(true)
+          handleSwipe(dx > 0 ? 'like' : 'dislike')
+        } else {
+          // Return to center
+          x.set(0)
+          y.set(0)
+        }
       }
+      
+      // Reset for next gesture after animation completes
+      setTimeout(() => {
+        setGestureComplete(false)
+        setIsSwipeAnimating(false)
+      }, 300)
     }
   }, {
     drag: {
       filterTaps: true,
-      rubberband: true,
-      bounds: { left: -300, right: 300, top: -100, bottom: 100 }
+      axis: 'x',
+      threshold: 10
     }
   })
   
   const handleSwipe = (action: 'like' | 'dislike') => {
-    if (!currentPatch || isSwipeAnimating) {
-      console.log('🚫 Swipe blocked:', { currentPatch: !!currentPatch, isSwipeAnimating })
+    if (!currentPatch) return
+    
+    if (action === 'dislike') {
+      // Move to next patch
+      nextPatch()
+      
+      // Animate card out
+      x.set(-400)
+      setTimeout(() => {
+        x.set(0)
+        y.set(0)
+      }, 150)
       return
     }
     
-    console.log('🔄 Processing swipe:', action, 'for patch:', currentPatch.name)
+    // Right swipe (like)
     setIsSwipeAnimating(true)
     
-    // Animate card off screen with spring physics
-    const targetX = action === 'like' ? 500 : -500
-    const targetY = action === 'like' ? -100 : 100
+    x.set(400)
     
-    // Use animate API with spring config
-    const animateCard = async () => {
+    setTimeout(() => {
       try {
-        // Animate the card away
-        await Promise.all([
-          new Promise(resolve => {
-            x.set(targetX)
-            setTimeout(resolve, 300)
-          }),
-          new Promise(resolve => {
-            y.set(targetY)  
-            setTimeout(resolve, 300)
-          })
-        ])
+        nextPatch()
+        setMatchedPatch(currentPatch)
+        setShowMatch(true)
         
-        // Process the swipe - wrap in try/catch to prevent app breaking
-        try {
-          swipePatch({
-            grassId: currentPatch.id,
-            action: action,
-            timestamp: Date.now()
-          })
-          console.log('✅ Swipe processed successfully:', action)
-        } catch (swipeError) {
-          console.error('❌ Error processing swipe:', swipeError)
-        }
+        setTimeout(() => {
+          setShowMatch(false)
+          setMatchedPatch(null)
+        }, 3000)
         
-        // Reset position for next card
-        x.set(0)
-        y.set(0)
-        
-        // Move to next patch - wrap in try/catch
-        try {
-          nextPatch()
-          console.log('✅ Moved to next patch')
-        } catch (nextError) {
-          console.error('❌ Error moving to next patch:', nextError)
-        }
-        
-        // Handle match logic for likes
-        if (action === 'like') {
-          setMatchedPatch(currentPatch)
-          setShowMatch(true)
-          setTimeout(() => setShowMatch(false), 2000)
-        }
-        
-      } catch (animationError) {
-        console.error('❌ Animation error:', animationError)
-      } finally {
-        // Always clear animation state to prevent app from getting stuck
-        setIsSwipeAnimating(false)
-        console.log('🔄 Animation state cleared')
+      } catch (error) {
+        console.error('❌ Right swipe error:', error)
       }
-    }
-    
-    animateCard().catch(error => {
-      console.error('❌ Swipe animation failed:', error)
+      
+      x.set(0)
+      y.set(0)
       setIsSwipeAnimating(false)
-    })
+    }, 200)
   }
   
   
@@ -255,15 +233,17 @@ const SwipeScreen: React.FC = () => {
     }
   }
 
-  // Add keyboard shortcuts for testing
+  // Keyboard shortcuts for desktop users
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      // Don't handle keyboard if modal is open or animating
       if (showMatch || isSwipeAnimating) return
       
       if (e.key === 'ArrowLeft') {
         handleSwipe('dislike')
       } else if (e.key === 'ArrowRight') {
+        handleSwipe('like')
+      } else if (e.key === ' ') {
+        e.preventDefault()
         handleSwipe('like')
       }
     }
@@ -274,20 +254,40 @@ const SwipeScreen: React.FC = () => {
   
   if (!currentPatch) {
     return (
-      <div className="h-full flex items-center justify-center px-4">
-        <div className="text-center">
-          <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-grass-400 to-grass-600 flex items-center justify-center">
-            <Heart className="w-16 h-16 text-white" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">No More Grass!</h2>
-          <p className="text-gray-600 mb-8">You've seen all the patches in your area. Check back later for fresh grass!</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-8 py-3 bg-gradient-to-r from-grass-500 to-grass-600 text-white rounded-full font-semibold hover:shadow-lg transition-all duration-200"
+      <div className="h-full flex items-center justify-center px-6 bg-gradient-to-br from-emerald-50 via-white to-green-50">
+        <motion.div 
+          className="text-center max-w-sm"
+          initial={{ opacity: 0, scale: 0.8, y: 50 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <motion.div 
+            className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-2xl"
+            animate={{ 
+              scale: [1, 1.1, 1],
+              rotate: [0, 5, -5, 0]
+            }}
+            transition={{ 
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
           >
-            Reset Stack
-          </button>
-        </div>
+            <Heart className="w-16 h-16 text-white" />
+          </motion.div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">All Caught Up!</h2>
+          <p className="text-gray-600 mb-8 leading-relaxed">You've explored all the grass patches in your area. Great job touching grass!</p>
+          <motion.button 
+            onClick={() => {
+              useAppStore.setState({ currentPatchIndex: 0 })
+            }}
+            className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Start Over
+          </motion.button>
+        </motion.div>
       </div>
     )
   }

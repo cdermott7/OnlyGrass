@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import ErrorBoundary from './components/ErrorBoundary'
+import LoadingSkeleton from './components/LoadingSkeleton'
 import SwipeScreen from './components/SwipeScreen'
 import MatchScreen from './components/MatchScreen'
 import ProfileScreen from './components/ProfileScreen'
@@ -30,14 +32,7 @@ function AppContent() {
   }, [user, initializeLocation])
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🌱</div>
-          <div className="text-white text-xl font-semibold">Loading OnlyGrass...</div>
-        </div>
-      </div>
-    )
+    return <LoadingSkeleton type="full" />
   }
 
   if (!user) {
@@ -191,9 +186,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
 

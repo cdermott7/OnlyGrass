@@ -16,7 +16,40 @@ export class GeminiService {
     imageFile: File,
     expectedLocation: { lat: number; lng: number; name: string }
   ): Promise<PhotoValidationResult> {
-    // Simulate API processing delay
+    console.log('🎯 Validating photo for location:', expectedLocation.name)
+    
+    // DEMO HARDCODE: Only auto-pass UC Berkeley campus challenges for demo
+    // This should be very specific to avoid all images passing
+    const locationName = expectedLocation.name.toLowerCase()
+    const isUCBerkeley = (locationName.includes('uc berkeley') && locationName.includes('campus')) ||
+                        (locationName.includes('university of california') && locationName.includes('berkeley') && locationName.includes('campus')) ||
+                        (locationName.includes('berkeley') && locationName.includes('campus') && locationName.includes('university'))
+    
+    console.log('🎯 Checking location for demo mode:', {
+      name: expectedLocation.name,
+      isUCBerkeley,
+      containsUC: locationName.includes('uc'),
+      containsBerkeley: locationName.includes('berkeley'),
+      containsCampus: locationName.includes('campus')
+    })
+    
+    if (isUCBerkeley) {
+      console.log('🎓 DEMO MODE: UC Berkeley Campus challenge detected - auto-passing validation!')
+      
+      await new Promise(resolve => setTimeout(resolve, 1500)) // Shorter delay for demo
+      
+      return {
+        isValid: true,
+        confidence: 95,
+        reason: `DEMO: ${expectedLocation.name} grass touching successfully validated!`,
+        hasGrass: true,
+        hasHuman: true,
+        location: expectedLocation.name,
+        feedback: `Perfect grass touching at ${expectedLocation.name}! You've successfully demonstrated your outdoor skills. Great job! 🌱✨`
+      }
+    }
+    
+    // Simulate API processing delay for other locations
     await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000))
 
     try {

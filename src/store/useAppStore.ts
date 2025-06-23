@@ -204,20 +204,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Load user from authentication
   loadCurrentUser: async () => {
     try {
-      console.log('🔄 Loading current user...')
       const authUser = await authService.getCurrentUser()
       if (authUser) {
-        console.log('🔄 Got auth user, loading profile...')
         const profile = await authService.getUserProfile(authUser.id)
-        console.log('🔄 Got profile, avatar_url:', profile.avatar_url)
         const user = await convertProfileToUser(profile)
-        console.log('🔄 Converted to user, avatar:', user.avatar)
         set({ currentUser: user })
         return user
       }
     } catch (error) {
-      console.error('Failed to load current user:', error)
-      set({ error: 'Failed to load user profile' })
+      // Silent error handling in production
+      set({ error: 'Unable to load user profile' })
     }
     return null
   },
@@ -350,11 +346,17 @@ export const useAppStore = create<AppState>((set, get) => ({
         grassPatches.push(patch)
       }
       
+      // Only reset index if we're loading fresh patches, not refreshing
+      const state = get()
+      const shouldResetIndex = state.grassPatches.length === 0 || state.currentPatchIndex >= grassPatches.length
+      
+      console.log('🔄 Loading patches. Should reset index?', shouldResetIndex, 'Current index:', state.currentPatchIndex, 'New patches:', grassPatches.length)
+      
       set({ 
         grassPatches,
-        currentPatchIndex: 0,
-        swipedPatches: new Set(),
-        likedPatches: new Set()
+        currentPatchIndex: shouldResetIndex ? 0 : state.currentPatchIndex,
+        swipedPatches: shouldResetIndex ? new Set() : state.swipedPatches,
+        likedPatches: shouldResetIndex ? new Set() : state.likedPatches
       })
       
     } catch (error) {
@@ -515,10 +517,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       if (action.action === 'like') {
         newLikedPatches.add(action.grassId)
-        console.log('👍 Added patch to liked:', action.grassId)
         // Challenge will be created when user confirms in startChallenge modal
-      } else {
-        console.log('👎 Swiped left on patch:', action.grassId)
       }
       
       set({
@@ -526,29 +525,24 @@ export const useAppStore = create<AppState>((set, get) => ({
         likedPatches: newLikedPatches
       })
     } catch (error) {
-      console.error('❌ Error in swipePatch:', error)
-      // Don't throw - just log the error to prevent app crashes
+      // Silent error handling in production
     }
   },
   
   nextPatch: () => {
     try {
       const { currentPatchIndex, grassPatches } = get()
-      console.log('🔄 Moving to next patch. Current index:', currentPatchIndex, 'Total patches:', grassPatches.length)
       
       if (currentPatchIndex < grassPatches.length - 1) {
-        set({ currentPatchIndex: currentPatchIndex + 1 })
-        console.log('✅ Moved to patch index:', currentPatchIndex + 1)
+        const newIndex = currentPatchIndex + 1
+        set({ currentPatchIndex: newIndex })
       } else {
-        console.log('🔄 Running out of patches, refreshing...')
-        // Load more patches if we're running out - don't await to prevent blocking
-        get().refreshNearbyGrass().catch(error => {
-          console.error('❌ Error refreshing grass patches:', error)
-        })
+        // At the end - cycle back to beginning for continuous experience
+        set({ currentPatchIndex: 0 })
       }
     } catch (error) {
-      console.error('❌ Error in nextPatch:', error)
-      // Don't throw - just log the error to prevent app crashes
+      // Silent error handling in production
+      set({ currentPatchIndex: 0 })
     }
   },
   
